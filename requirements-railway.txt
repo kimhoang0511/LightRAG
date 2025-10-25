@@ -1,0 +1,44 @@
+# LightRAG Vietnamese Embedding Requirements for Railway/Cloud Deployment
+# This file includes all necessary dependencies for running LightRAG API server
+# with Vietnamese Embedding support
+
+# Core LightRAG dependencies
+aiohttp
+aiofiles
+ascii_colors
+asyncpg
+configparser
+distro
+fastapi
+future
+httpcore
+httpx
+jiter
+json_repair
+nano-vectordb
+networkx
+numpy
+openai>=1.0.0,<3.0.0
+pandas>=2.0.0,<2.4.0
+passlib[bcrypt]
+pipmaster
+psutil
+pydantic
+PyJWT>=2.8.0,<3.0.0
+pypinyin
+python-dotenv
+python-jose[cryptography]
+python-multipart
+pytz
+setuptools
+tenacity
+tiktoken
+uvicorn
+xlsxwriter>=3.1.0
+
+# Vietnamese Embedding specific dependencies
+torch>=2.0.0
+transformers>=4.30.0
+
+# Optional: For production deployment
+gunicorn>=20.1.0

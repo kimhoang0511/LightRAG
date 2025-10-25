@@ -2,24 +2,29 @@
 Vietnamese Embedding Integration for LightRAG
 Model: AITeamVN/Vietnamese_Embedding
 Base: BAAI/bge-m3
+
+Installation:
+    pip install lightrag-hku[vietnamese-embedding]
+    
+    Or manually:
+    pip install torch>=2.0.0 transformers>=4.30.0
 """
 
 import os
 import numpy as np
-import torch
 from functools import lru_cache
 
-import pipmaster as pm
+# Check and install required packages
+try:
+    import torch
+    from transformers import AutoTokenizer, AutoModel
+except ImportError as e:
+    raise ImportError(
+        "Vietnamese Embedding requires torch and transformers. "
+        "Install with: pip install lightrag-hku[vietnamese-embedding] "
+        "or manually: pip install torch>=2.0.0 transformers>=4.30.0"
+    ) from e
 
-# Install required packages
-if not pm.is_installed("transformers"):
-    pm.install("transformers")
-if not pm.is_installed("torch"):
-    pm.install("torch")
-if not pm.is_installed("numpy"):
-    pm.install("numpy")
-
-from transformers import AutoTokenizer, AutoModel
 from tenacity import (
     retry,
     stop_after_attempt,
