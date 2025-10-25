@@ -1,0 +1,55 @@
+# Railway-optimized Dockerfile for LightRAG with Vietnamese Embedding
+# This Dockerfile ensures torch and transformers are properly installed
+
+FROM python:3.10-slim-bullseye
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Copy project files
+COPY pyproject.toml setup.py MANIFEST.in ./
+COPY lightrag/ ./lightrag/
+
+# Install PyTorch and Transformers FIRST (separate layer for better caching)
+RUN echo "🔧 Installing PyTorch and Transformers..." && \
+    pip install --no-cache-dir torch>=2.0.0 transformers>=4.30.0 && \
+    echo "✅ PyTorch and Transformers installed"
+
+# Install LightRAG with API dependencies
+RUN echo "🔧 Installing LightRAG with API dependencies..." && \
+    pip install --no-cache-dir -e .[api] && \
+    echo "✅ LightRAG installed"
+
+# Verify torch and transformers installation
+RUN echo "🔍 Verifying installations..." && \
+    python -c "import torch; print(f'✅ Torch {torch.__version__} installed successfully')" && \
+    python -c "import transformers; print(f'✅ Transformers installed successfully')" && \
+    python -c "from lightrag.llm.vietnamese_embed import vietnamese_embed; print('✅ Vietnamese embedding module loaded')" && \
+    echo "✅ All verifications passed"
+
+# Create data directories
+RUN mkdir -p /app/data/rag_storage /app/data/inputs
+
+# Environment variables
+ENV WORKING_DIR=/app/data/rag_storage
+ENV INPUT_DIR=/app/data/inputs
+ENV PYTHONUNBUFFERED=1
+
+# Expose port
+EXPOSE 9621
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:9621/health || exit 1
+
+# Start server
+CMD ["lightrag-server"]

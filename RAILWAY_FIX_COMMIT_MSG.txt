@@ -1,0 +1,72 @@
+Fix Railway Deployment: No module named 'torch'
+
+## Problem
+Railway deployment fails with "No module named 'torch'" despite torch being in:
+- pyproject.toml [api] dependencies
+- requirements-railway.txt
+- nixpacks.toml
+
+Root causes:
+1. Python version mismatch (nixpacks.toml: 3.10, actual: 3.12)
+2. Nixpacks unreliable for heavy dependencies like torch
+3. Build commands not executing properly
+
+## Solution
+Switch from Nixpacks to Dockerfile for deterministic builds.
+
+### Changes Made
+
+1. **Dockerfile.railway** (NEW)
+   - Uses Python 3.10-slim-bullseye (fixed version)
+   - Installs torch+transformers in separate layer (better caching)
+   - Verifies installation before proceeding (fail fast)
+   - Includes Vietnamese embedding module load test
+
+2. **railway.json** (UPDATED)
+   - Builder: NIXPACKS → DOCKERFILE
+   - DockerfilePath: Dockerfile.railway
+
+3. **vietnamese_embed.py** (ENHANCED)
+   - Added comprehensive debug logging
+   - Shows Python version, sys.path, installed packages
+   - Detailed torch import diagnostics
+   - Helps identify root cause if errors persist
+
+4. **Documentation** (NEW)
+   - RAILWAY_DEPLOYMENT_FIX_TORCH.md: Technical details
+   - RAILWAY_VIETNAMESE_DEPLOY.md: User-friendly guide
+   - deploy-railway.sh: Automated deployment script
+
+### Benefits
+✅ Deterministic builds (same result every time)
+✅ Explicit Python 3.10 (no version drift)
+✅ Guaranteed torch installation (separate pip step)
+✅ Early failure detection (verification step)
+✅ Better caching (torch layer cached separately)
+✅ Comprehensive logging (debug if needed)
+
+### Verification
+Build logs should show:
+- ✅ Torch 2.x.x installed successfully
+- ✅ Transformers installed successfully
+- ✅ Vietnamese embedding module loaded
+- ✅ All verifications passed
+
+### Deployment
+```bash
+./deploy-railway.sh
+```
+
+Or manually:
+```bash
+git push origin main
+# Railway auto-detects and builds
+```
+
+### Files Changed
+- Dockerfile.railway (new)
+- railway.json (updated)
+- vietnamese_embed.py (enhanced logging)
+- RAILWAY_DEPLOYMENT_FIX_TORCH.md (new)
+- RAILWAY_VIETNAMESE_DEPLOY.md (new)
+- deploy-railway.sh (new)
