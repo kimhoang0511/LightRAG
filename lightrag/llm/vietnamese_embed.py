@@ -19,6 +19,7 @@ try:
     import torch
     from transformers import AutoTokenizer, AutoModel
 except ImportError as e:
+    print("=== Chi tiết lỗi gốc: ", e, flush=True)
     raise ImportError(
         "Vietnamese Embedding requires torch and transformers. "
         "Install with: pip install lightrag-hku[vietnamese-embedding] "
