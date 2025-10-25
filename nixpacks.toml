@@ -1,0 +1,13 @@
+# Railway Nixpacks Configuration for LightRAG with Vietnamese Embedding
+
+[phases.setup]
+nixPkgs = ["python310", "pip"]
+
+[phases.install]
+cmds = [
+    "pip install --no-cache-dir --upgrade pip setuptools wheel",
+    "pip install --no-cache-dir -e .[api]"
+]
+
+[start]
+cmd = "lightrag-server"

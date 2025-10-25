@@ -75,6 +75,9 @@ api = [
     "python-multipart",
     "pytz",
     "uvicorn",
+    # Vietnamese Embedding support (included by default in api)
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
 ]
 
 # Offline deployment dependencies (layered design for flexibility)
