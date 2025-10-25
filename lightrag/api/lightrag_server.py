@@ -264,6 +264,109 @@ def check_frontend_build():
         logger.warning(f"Failed to check frontend source freshness: {e}")
 
 
+def check_and_fix_embedding_dimension_mismatch(args):
+    """
+    Check if existing vector database has different embedding dimension
+    than configured. If mismatch detected, backup and clean the old data.
+    
+    This prevents the "Embedding dim mismatch" error when switching embedding models.
+    """
+    import json
+    import shutil
+    from datetime import datetime
+    
+    working_dir = Path(args.working_dir)
+    
+    # Skip if working directory doesn't exist (fresh start)
+    if not working_dir.exists():
+        return
+    
+    # Check vector database files
+    vdb_files = [
+        working_dir / "vdb_entities.json",
+        working_dir / "vdb_relationships.json",
+        working_dir / "vdb_chunks.json"
+    ]
+    
+    mismatch_detected = False
+    stored_dim = None
+    
+    for vdb_file in vdb_files:
+        if not vdb_file.exists():
+            continue
+            
+        try:
+            with open(vdb_file, 'r') as f:
+                data = json.load(f)
+                stored_dim = data.get('embedding_dim')
+                
+                if stored_dim and stored_dim != args.embedding_dim:
+                    mismatch_detected = True
+                    logger.warning(
+                        f"Embedding dimension mismatch detected in {vdb_file.name}!"
+                    )
+                    logger.warning(
+                        f"  Stored: {stored_dim} dim, "
+                        f"Configured: {args.embedding_dim} dim"
+                    )
+                    break
+        except Exception as e:
+            logger.warning(f"Could not check {vdb_file.name}: {e}")
+            continue
+    
+    if not mismatch_detected:
+        return
+    
+    # Mismatch detected - need to clean
+    logger.warning("=" * 70)
+    logger.warning("EMBEDDING DIMENSION MISMATCH DETECTED")
+    logger.warning("=" * 70)
+    logger.warning(
+        f"Cannot mix {stored_dim}-dim and {args.embedding_dim}-dim embeddings!"
+    )
+    logger.warning("Automatic fix: Backing up and cleaning old data...")
+    
+    try:
+        # Create backup
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_dir = f"{working_dir}_backup_{stored_dim}dim_{timestamp}"
+        
+        logger.info(f"Creating backup: {backup_dir}")
+        shutil.copytree(working_dir, backup_dir)
+        logger.info(f"✓ Backup created successfully")
+        
+        # Remove old data
+        logger.info(f"Removing old data: {working_dir}")
+        shutil.rmtree(working_dir)
+        logger.info(f"✓ Old data removed")
+        
+        # Log success
+        logger.warning("=" * 70)
+        logger.warning("AUTOMATIC FIX COMPLETED")
+        logger.warning("=" * 70)
+        logger.info(f"✓ Old data backed up to: {backup_dir}")
+        logger.info(f"✓ Ready for fresh start with {args.embedding_dim}-dim embeddings")
+        logger.info("✓ Server will now initialize with clean storage")
+        logger.warning(
+            f"⚠ To restore old data: "
+            f"mv {backup_dir} {working_dir} "
+            f"(and revert embedding config)"
+        )
+        logger.warning("=" * 70)
+        
+    except Exception as e:
+        logger.error(f"Failed to fix dimension mismatch: {e}")
+        logger.error(
+            "Please manually clean the working directory or "
+            "revert to the original embedding configuration"
+        )
+        raise Exception(
+            f"Embedding dimension mismatch: expected {args.embedding_dim}, "
+            f"but database has {stored_dim}. "
+            f"Automatic fix failed. See EMBEDDING_DIMENSION_MISMATCH_FIX.md"
+        )
+
+
 def create_app(args):
     # Check frontend build first
     check_frontend_build()
@@ -271,6 +374,9 @@ def create_app(args):
     # Setup logging
     logger.setLevel(args.log_level)
     set_verbose_debug(args.verbose)
+
+    # Check and fix embedding dimension mismatch (before anything else)
+    check_and_fix_embedding_dimension_mismatch(args)
 
     # Create configuration cache (this will output configuration logs)
     config_cache = LLMConfigCache(args)
