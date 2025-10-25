@@ -11,20 +11,113 @@ Installation:
 """
 
 import os
+import sys
 import numpy as np
 from functools import lru_cache
 
-# Check and install required packages
+# Debug logging for import process
+print("=" * 80, flush=True)
+print("🔍 VIETNAMESE EMBEDDING - Import Debug", flush=True)
+print("=" * 80, flush=True)
+print(f"Python version: {sys.version}", flush=True)
+print(f"Python executable: {sys.executable}", flush=True)
+print(f"Python path: {sys.path}", flush=True)
+print("-" * 80, flush=True)
+
+# Check if packages are installed
+print("📦 Checking installed packages...", flush=True)
+try:
+    import pkg_resources
+    installed = {pkg.key for pkg in pkg_resources.working_set}
+    print(f"✓ Total packages installed: {len(installed)}", flush=True)
+    
+    if 'torch' in installed:
+        torch_pkg = pkg_resources.get_distribution('torch')
+        print(f"✓ torch found: version {torch_pkg.version}", flush=True)
+    else:
+        print("✗ torch NOT found in installed packages", flush=True)
+    
+    if 'transformers' in installed:
+        trans_pkg = pkg_resources.get_distribution('transformers')
+        print(f"✓ transformers found: version {trans_pkg.version}", flush=True)
+    else:
+        print("✗ transformers NOT found in installed packages", flush=True)
+        
+except Exception as e:
+    print(f"⚠ Could not check pkg_resources: {e}", flush=True)
+
+print("-" * 80, flush=True)
+
+# Try to import torch with detailed error
+print("🔧 Attempting to import torch...", flush=True)
 try:
     import torch
-    from transformers import AutoTokenizer, AutoModel
+    print(f"✅ torch imported successfully!", flush=True)
+    print(f"   torch version: {torch.__version__}", flush=True)
+    print(f"   torch file location: {torch.__file__}", flush=True)
+    print(f"   CUDA available: {torch.cuda.is_available()}", flush=True)
+    print(f"   MPS available: {torch.backends.mps.is_available()}", flush=True)
 except ImportError as e:
-    print("=== Chi tiết lỗi gốc: ", e, flush=True)
+    print(f"❌ Failed to import torch!", flush=True)
+    print(f"   Error: {e}", flush=True)
+    print(f"   Error type: {type(e).__name__}", flush=True)
+    
+    # Try to find torch manually
+    print("\n🔍 Searching for torch in sys.path...", flush=True)
+    for path in sys.path:
+        if os.path.exists(path):
+            try:
+                items = os.listdir(path)
+                torch_items = [item for item in items if 'torch' in item.lower()]
+                if torch_items:
+                    print(f"   Found in {path}:", flush=True)
+                    for item in torch_items:
+                        print(f"     - {item}", flush=True)
+            except Exception:
+                pass
+    
+    print("=" * 80, flush=True)
     raise ImportError(
-        "Vietnamese Embedding requires torch and transformers. "
-        "Install with: pip install lightrag-hku[vietnamese-embedding] "
-        "or manually: pip install torch>=2.0.0 transformers>=4.30.0"
+        f"\n{'='*80}\n"
+        f"❌ TORCH IMPORT FAILED\n"
+        f"{'='*80}\n"
+        f"Error: {e}\n\n"
+        f"Vietnamese Embedding requires torch and transformers.\n\n"
+        f"Installation commands:\n"
+        f"  pip install lightrag-hku[vietnamese-embedding]\n"
+        f"  OR\n"
+        f"  pip install torch>=2.0.0 transformers>=4.30.0\n\n"
+        f"For Railway deployment, ensure pyproject.toml includes:\n"
+        f"  api = [..., 'torch>=2.0.0', 'transformers>=4.30.0']\n"
+        f"{'='*80}\n"
     ) from e
+
+print("-" * 80, flush=True)
+
+# Try to import transformers
+print("🔧 Attempting to import transformers...", flush=True)
+try:
+    from transformers import AutoTokenizer, AutoModel
+    print(f"✅ transformers imported successfully!", flush=True)
+    import transformers
+    print(f"   transformers version: {transformers.__version__}", flush=True)
+    print(f"   transformers file location: {transformers.__file__}", flush=True)
+except ImportError as e:
+    print(f"❌ Failed to import transformers!", flush=True)
+    print(f"   Error: {e}", flush=True)
+    print("=" * 80, flush=True)
+    raise ImportError(
+        f"\n{'='*80}\n"
+        f"❌ TRANSFORMERS IMPORT FAILED\n"
+        f"{'='*80}\n"
+        f"Error: {e}\n\n"
+        f"Install with: pip install transformers>=4.30.0\n"
+        f"{'='*80}\n"
+    ) from e
+
+print("=" * 80, flush=True)
+print("✅ ALL IMPORTS SUCCESSFUL - Vietnamese Embedding Ready!", flush=True)
+print("=" * 80, flush=True)
 
 from tenacity import (
     retry,
