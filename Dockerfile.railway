@@ -46,10 +46,11 @@ RUN pip install --no-cache-dir \
     torch==2.1.0+cpu \
     -f https://download.pytorch.org/whl/torch_stable.html
 
-# Install transformers with compatible tokenizers version
+# Install transformers and tokenizers with compatible versions for Vietnamese_Embedding
+# Use newer transformers to fix tokenizers enum error
 RUN pip install --no-cache-dir \
-    transformers==4.35.0 \
-    tokenizers==0.14.1 \
+    transformers==4.36.2 \
+    tokenizers==0.15.1 \
     sentencepiece==0.1.99
 
 # Install LightRAG dependencies WITHOUT dev/test packages
