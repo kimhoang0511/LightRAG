@@ -38,6 +38,12 @@ async def vietnamese_embed(texts: List[str], model_name: str = DEFAULT_MODEL, to
     if token is None:
         token = get_api_token()
     
+    # Override AITeamVN/Vietnamese_Embedding to use BAAI/bge-m3 (base model that supports Inference API)
+    # AITeamVN model doesn't support feature-extraction API, only sentence-similarity
+    if "AITeamVN" in model_name or "Vietnamese_Embedding" in model_name:
+        logger.warning(f"AITeamVN/Vietnamese_Embedding doesn't support Inference API feature-extraction. Using BAAI/bge-m3 instead.")
+        model_name = DEFAULT_MODEL
+    
     logger.info(f"Calling HuggingFace Inference API for {len(texts)} texts using {model_name}")
     
     try:
