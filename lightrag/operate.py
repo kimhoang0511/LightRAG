@@ -47,6 +47,7 @@ from lightrag.base import (
     QueryContextResult,
 )
 from lightrag.prompt import PROMPTS
+from lightrag.prompt_utils import get_prompt, get_language_from_config
 from lightrag.constants import (
     GRAPH_FIELD_SEP,
     DEFAULT_MAX_ENTITY_TOKENS,
@@ -306,7 +307,7 @@ async def _summarize_descriptions(
 
     summary_length_recommended = global_config["summary_length_recommended"]
 
-    prompt_template = PROMPTS["summarize_entity_descriptions"]
+    prompt_template = get_prompt("summarize_entity_descriptions", language=language)
 
     # Convert descriptions to JSONL format and apply token-based truncation
     tokenizer = global_config["tokenizer"]
@@ -2665,11 +2666,13 @@ async def extract_entities(
         "entity_types", DEFAULT_ENTITY_TYPES
     )
 
-    examples = "\n".join(PROMPTS["entity_extraction_examples"])
+    # Get examples with language support
+    examples_list = get_prompt("entity_extraction_examples", language=language)
+    examples = "\n".join(examples_list)
 
     example_context_base = dict(
-        tuple_delimiter=PROMPTS["DEFAULT_TUPLE_DELIMITER"],
-        completion_delimiter=PROMPTS["DEFAULT_COMPLETION_DELIMITER"],
+        tuple_delimiter=get_prompt("DEFAULT_TUPLE_DELIMITER", language=language),
+        completion_delimiter=get_prompt("DEFAULT_COMPLETION_DELIMITER", language=language),
         entity_types=", ".join(entity_types),
         language=language,
     )
@@ -2677,8 +2680,8 @@ async def extract_entities(
     examples = examples.format(**example_context_base)
 
     context_base = dict(
-        tuple_delimiter=PROMPTS["DEFAULT_TUPLE_DELIMITER"],
-        completion_delimiter=PROMPTS["DEFAULT_COMPLETION_DELIMITER"],
+        tuple_delimiter=get_prompt("DEFAULT_TUPLE_DELIMITER", language=language),
+        completion_delimiter=get_prompt("DEFAULT_COMPLETION_DELIMITER", language=language),
         entity_types=",".join(entity_types),
         examples=examples,
         language=language,
@@ -2705,16 +2708,16 @@ async def extract_entities(
         # Create cache keys collector for batch processing
         cache_keys_collector = []
 
-        # Get initial extraction
-        entity_extraction_system_prompt = PROMPTS[
-            "entity_extraction_system_prompt"
-        ].format(**{**context_base, "input_text": content})
-        entity_extraction_user_prompt = PROMPTS["entity_extraction_user_prompt"].format(
-            **{**context_base, "input_text": content}
-        )
-        entity_continue_extraction_user_prompt = PROMPTS[
-            "entity_continue_extraction_user_prompt"
-        ].format(**{**context_base, "input_text": content})
+        # Get initial extraction with language support
+        entity_extraction_system_prompt = get_prompt(
+            "entity_extraction_system_prompt", language=language
+        ).format(**{**context_base, "input_text": content})
+        entity_extraction_user_prompt = get_prompt(
+            "entity_extraction_user_prompt", language=language
+        ).format(**{**context_base, "input_text": content})
+        entity_continue_extraction_user_prompt = get_prompt(
+            "entity_continue_extraction_user_prompt", language=language
+        ).format(**{**context_base, "input_text": content})
 
         final_result, timestamp = await use_llm_func_with_cache(
             entity_extraction_user_prompt,
@@ -2927,7 +2930,8 @@ async def kg_query(
         Returns None when no relevant context could be constructed for the query.
     """
     if not query:
-        return QueryResult(content=PROMPTS["fail_response"])
+        language = get_language_from_config(global_config, "")
+        return QueryResult(content=get_prompt("fail_response", language=language))
 
     if query_param.model_func:
         use_model_func = query_param.model_func
@@ -2953,7 +2957,8 @@ async def kg_query(
             logger.warning(f"Forced low_level_keywords to origin query: {query}")
             ll_keywords = [query]
         else:
-            return QueryResult(content=PROMPTS["fail_response"])
+            language = get_language_from_config(global_config, query)
+            return QueryResult(content=get_prompt("fail_response", language=language))
 
     ll_keywords_str = ", ".join(ll_keywords) if ll_keywords else ""
     hl_keywords_str = ", ".join(hl_keywords) if hl_keywords else ""
@@ -2988,8 +2993,11 @@ async def kg_query(
         else "Multiple Paragraphs"
     )
 
-    # Build system prompt
-    sys_prompt_temp = system_prompt if system_prompt else PROMPTS["rag_response"]
+    # Build system prompt with language detection
+    language = get_language_from_config(global_config, query)
+    sys_prompt_temp = system_prompt if system_prompt else get_prompt(
+        "rag_response", language=language
+    )
     sys_prompt = sys_prompt_temp.format(
         response_type=response_type,
         user_prompt=user_prompt,
@@ -3158,13 +3166,14 @@ async def extract_keywords_only(
                 "Invalid cache format for keywords, proceeding with extraction"
             )
 
-    # 2. Build the examples
-    examples = "\n".join(PROMPTS["keywords_extraction_examples"])
-
-    language = global_config["addon_params"].get("language", DEFAULT_SUMMARY_LANGUAGE)
+    # 2. Build the examples with language detection
+    language = get_language_from_config(global_config, text)
+    examples_list = get_prompt("keywords_extraction_examples", language=language)
+    examples = "\n".join(examples_list)
 
     # 3. Build the keyword-extraction prompt
-    kw_prompt = PROMPTS["keywords_extraction"].format(
+    kw_prompt_template = get_prompt("keywords_extraction", language=language)
+    kw_prompt = kw_prompt_template.format(
         query=text,
         examples=examples,
         language=language,
@@ -3771,12 +3780,13 @@ async def _build_llm_context(
         global_config.get("max_total_tokens", DEFAULT_MAX_TOTAL_TOKENS),
     )
 
-    # Get the system prompt template from PROMPTS or global_config
+    # Get the system prompt template with language support
+    language = get_language_from_config(global_config, query)
     sys_prompt_template = global_config.get(
-        "system_prompt_template", PROMPTS["rag_response"]
+        "system_prompt_template", get_prompt("rag_response", language=language)
     )
 
-    kg_context_template = PROMPTS["kg_query_context"]
+    kg_context_template = get_prompt("kg_query_context", language=language)
     user_prompt = query_param.user_prompt if query_param.user_prompt else ""
     response_type = (
         query_param.response_type
@@ -4663,7 +4673,8 @@ async def naive_query(
     """
 
     if not query:
-        return QueryResult(content=PROMPTS["fail_response"])
+        language = get_language_from_config(global_config, "")
+        return QueryResult(content=get_prompt("fail_response", language=language))
 
     if query_param.model_func:
         use_model_func = query_param.model_func
@@ -4675,7 +4686,8 @@ async def naive_query(
     tokenizer: Tokenizer = global_config["tokenizer"]
     if not tokenizer:
         logger.error("Tokenizer not found in global configuration.")
-        return QueryResult(content=PROMPTS["fail_response"])
+        language = get_language_from_config(global_config, query)
+        return QueryResult(content=get_prompt("fail_response", language=language))
 
     chunks = await _get_vector_context(query, chunks_vdb, query_param, None)
 
@@ -4700,9 +4712,10 @@ async def naive_query(
         else "Multiple Paragraphs"
     )
 
-    # Use the provided system prompt or default
+    # Use the provided system prompt or default with language support
+    language = get_language_from_config(global_config, query)
     sys_prompt_template = (
-        system_prompt if system_prompt else PROMPTS["naive_rag_response"]
+        system_prompt if system_prompt else get_prompt("naive_rag_response", language=language)
     )
 
     # Create a preliminary system prompt with empty content_data to calculate overhead
@@ -4781,7 +4794,7 @@ async def naive_query(
         if ref["reference_id"]
     )
 
-    naive_context_template = PROMPTS["naive_query_context"]
+    naive_context_template = get_prompt("naive_query_context", language=language)
     context_content = naive_context_template.format(
         text_chunks_str=text_units_str,
         reference_list_str=reference_list_str,

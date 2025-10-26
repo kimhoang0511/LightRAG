@@ -22,6 +22,7 @@ from typing import (
     Dict,
 )
 from lightrag.prompt import PROMPTS
+from lightrag.prompt_utils import get_prompt, get_language_from_config
 from lightrag.exceptions import PipelineCancelledException
 from lightrag.constants import (
     DEFAULT_MAX_GLEANING,
@@ -2720,7 +2721,8 @@ class LightRAG:
                         "mode": param.mode,
                     },
                     "llm_response": {
-                        "content": PROMPTS["fail_response"],
+                        "content": get_prompt("fail_response", 
+                                             language=get_language_from_config(asdict(self), query)),
                         "response_iterator": None,
                         "is_streaming": False,
                     },
