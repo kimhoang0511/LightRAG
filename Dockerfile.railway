@@ -1,6 +1,6 @@
-# Railway-optimized Dockerfile for LightRAG with Vietnamese Embedding
+# Railway-optimized Dockerfile for LightRAG with Vietnamese Embedding (Inference API)
 # Multi-stage build for minimal image size
-# Target: <3GB for Railway free tier
+# Target: <1GB (uses HuggingFace Inference API - no torch/transformers needed!)
 
 # ============================================================================
 # Stage 1: Frontend Builder - Build WebUI
@@ -41,20 +41,10 @@ COPY lightrag/ ./lightrag/
 # Copy built frontend from frontend-builder (vite builds to ../lightrag/api/webui)
 COPY --from=frontend-builder /app/lightrag/api/webui ./lightrag/api/webui
 
-# Install numpy first (required by torch for tensor operations)
-RUN pip install --no-cache-dir numpy==1.24.3
-
-# Install PyTorch CPU-only with specific version
+# Install numpy and huggingface-hub (lightweight compared to torch!)
 RUN pip install --no-cache-dir \
-    torch==2.1.0+cpu \
-    -f https://download.pytorch.org/whl/torch_stable.html
-
-# Install transformers and tokenizers with compatible versions for Vietnamese_Embedding
-# Use newer transformers to fix tokenizers enum error
-RUN pip install --no-cache-dir \
-    transformers==4.36.2 \
-    tokenizers==0.15.1 \
-    sentencepiece==0.1.99
+    numpy==1.24.3 \
+    huggingface-hub>=0.20.0
 
 # Install LightRAG dependencies WITHOUT dev/test packages
 RUN pip install --no-cache-dir -e .[api]
@@ -96,9 +86,9 @@ ENV PYTHONPATH=/app:$PYTHONPATH
 
 # Verify installations
 RUN python -c "import sys; print(f'Python: {sys.version}')" && \
-    python -c "import torch; print(f'✅ Torch {torch.__version__} (CPU-only)')" && \
-    python -c "import transformers; print(f'✅ Transformers OK')" && \
-    python -c "from lightrag.llm.vietnamese_embed import vietnamese_embed; print('✅ Vietnamese embedding ready')"
+    python -c "import numpy; print(f'✅ Numpy {numpy.__version__}')" && \
+    python -c "from huggingface_hub import InferenceClient; print(f'✅ HuggingFace Hub OK')" && \
+    python -c "from lightrag.llm.vietnamese_embed import vietnamese_embed; print('✅ Vietnamese embedding (Inference API) ready')"
 
 # Create data directories
 RUN mkdir -p /app/data/rag_storage /app/data/inputs
