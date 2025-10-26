@@ -41,6 +41,9 @@ COPY lightrag/ ./lightrag/
 # Copy built frontend from frontend-builder (vite builds to ../lightrag/api/webui)
 COPY --from=frontend-builder /app/lightrag/api/webui ./lightrag/api/webui
 
+# Install numpy first (required by torch for tensor operations)
+RUN pip install --no-cache-dir numpy==1.24.3
+
 # Install PyTorch CPU-only with specific version
 RUN pip install --no-cache-dir \
     torch==2.1.0+cpu \

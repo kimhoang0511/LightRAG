@@ -262,7 +262,7 @@ async def vietnamese_embed(
         
     except Exception as e:
         logger.error(f"Error generating Vietnamese embeddings: {e}")
-        raise APIConnectionError(f"Vietnamese embedding generation failed: {e}")
+        raise APIConnectionError(f"Vietnamese embedding generation failed: {e}") from e
 
 
 def mean_pooling(model_output, attention_mask):
