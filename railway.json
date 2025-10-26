@@ -5,7 +5,7 @@
     "dockerfilePath": "Dockerfile.railway-lite"
   },
   "deploy": {
-    "startCommand": "lightrag-server",
+    "startCommand": "python -m lightrag.api.lightrag_server",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }

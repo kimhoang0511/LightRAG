@@ -49,13 +49,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application code
 COPY --from=builder /build/lightrag /app/lightrag
 COPY --from=builder /build/pyproject.toml /build/setup.py /app/
 
+# Add app to PYTHONPATH so imports work
+ENV PYTHONPATH=/app:$PYTHONPATH
+
 # Verify installations
-RUN python -c "import torch; print(f'✅ Torch {torch.__version__} (CPU)')" && \
+RUN python -c "import sys; print(f'PYTHONPATH: {sys.path}')" && \
+    python -c "import torch; print(f'✅ Torch {torch.__version__} (CPU)')" && \
     python -c "import transformers; print('✅ Transformers OK')" && \
-    python -c "from lightrag.llm.vietnamese_embed import vietnamese_embed; print('✅ Vietnamese embedding OK')"
+    python -c "from lightrag.llm.vietnamese_embed import vietnamese_embed; print('✅ Vietnamese embedding OK')" && \
+    python -c "from lightrag.api.lightrag_server import main; print('✅ lightrag-server importable')"
 
 # Create data directories
 RUN mkdir -p /app/data/rag_storage /app/data/inputs
@@ -69,9 +76,5 @@ ENV WORKING_DIR=/app/data/rag_storage \
 # Expose port
 EXPOSE 9621
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:9621/health || exit 1
-
-# Start server
-CMD ["lightrag-server"]
+# Start server using python -m to ensure proper imports
+CMD ["python", "-m", "lightrag.api.lightrag_server"]
