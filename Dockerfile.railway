@@ -1,0 +1,110 @@
+# Railway-optimized Dockerfile for LightRAG with Vietnamese Embedding (Inference API)
+# Multi-stage build for minimal image size
+# Target: <1GB (uses HuggingFace Inference API - no torch/transformers needed!)
+
+# ============================================================================
+# Stage 1: Frontend Builder - Build WebUI
+# ============================================================================
+FROM oven/bun:1 AS frontend-builder
+
+WORKDIR /app
+
+# Copy frontend source AND create target directory structure
+COPY lightrag_webui/ ./lightrag_webui/
+RUN mkdir -p ./lightrag/api
+
+# Build frontend (vite will output to ../lightrag/api/webui)
+RUN cd lightrag_webui && \
+    bun install --frozen-lockfile && \
+    bun run build && \
+    echo "✅ Frontend built successfully"
+
+# ============================================================================
+# Stage 2: Python Builder - Install all dependencies
+# ============================================================================
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+# Install build dependencies (only in builder stage)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Copy project files
+COPY pyproject.toml setup.py MANIFEST.in ./
+COPY lightrag/ ./lightrag/
+
+# Copy built frontend from frontend-builder (vite builds to ../lightrag/api/webui)
+COPY --from=frontend-builder /app/lightrag/api/webui ./lightrag/api/webui
+
+# Install numpy and huggingface-hub (lightweight compared to torch!)
+RUN pip install --no-cache-dir \
+    numpy==1.24.3 \
+    huggingface-hub>=0.20.0
+
+# Install LightRAG dependencies WITHOUT dev/test packages
+RUN pip install --no-cache-dir -e .[api]
+
+# Aggressive cleanup in builder stage
+RUN find /usr/local/lib/python3.11/site-packages -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+    find /usr/local/lib/python3.11/site-packages -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
+    find /usr/local/lib/python3.11/site-packages -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find /usr/local/lib/python3.11/site-packages -name "*.pyc" -delete && \
+    find /usr/local/lib/python3.11/site-packages -name "*.pyo" -delete && \
+    find /usr/local/lib/python3.11/site-packages -name "*.pyd" -delete && \
+    find /usr/local/lib/python3.11/site-packages -name "*.so" -type f -exec strip {} + 2>/dev/null || true && \
+    pip cache purge && \
+    rm -rf /root/.cache/pip
+
+# ============================================================================
+# Stage 3: Runtime - Minimal final image
+# ============================================================================
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install ONLY runtime dependencies (no build-essential)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && rm -rf /var/cache/apt/*
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application code to /app (match the editable install path)
+COPY --from=builder /build /app
+# Also ensure lightrag is in the Python path
+ENV PYTHONPATH=/app:$PYTHONPATH
+
+# Verify installations
+RUN python -c "import sys; print(f'Python: {sys.version}')" && \
+    python -c "import numpy; print(f'✅ Numpy {numpy.__version__}')" && \
+    python -c "from huggingface_hub import InferenceClient; print(f'✅ HuggingFace Hub OK')" && \
+    python -c "from lightrag.llm.vietnamese_embed import vietnamese_embed; print('✅ Vietnamese embedding (Inference API) ready')"
+
+# Create data directories
+RUN mkdir -p /app/data/rag_storage /app/data/inputs
+
+# Environment variables
+ENV WORKING_DIR=/app/data/rag_storage \
+    INPUT_DIR=/app/data/inputs \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Expose port
+EXPOSE 9621
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:9621/health || exit 1
+
+# Start server
+CMD ["lightrag-server"]
