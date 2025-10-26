@@ -3,7 +3,23 @@
 # Target: <3GB for Railway free tier
 
 # ============================================================================
-# Stage 1: Builder - Install all dependencies
+# Stage 1: Frontend Builder - Build WebUI
+# ============================================================================
+FROM oven/bun:1 AS frontend-builder
+
+WORKDIR /app
+
+# Copy frontend source
+COPY lightrag_webui/ ./lightrag_webui/
+
+# Build frontend
+RUN cd lightrag_webui && \
+    bun install --frozen-lockfile && \
+    bun run build && \
+    echo "✅ Frontend built successfully"
+
+# ============================================================================
+# Stage 2: Python Builder - Install all dependencies
 # ============================================================================
 FROM python:3.11-slim AS builder
 
@@ -20,6 +36,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 # Copy project files
 COPY pyproject.toml setup.py MANIFEST.in ./
 COPY lightrag/ ./lightrag/
+
+# Copy built frontend from frontend-builder
+COPY --from=frontend-builder /app/lightrag_webui/dist ./lightrag/api/webui
 
 # Install PyTorch CPU-only with specific version
 RUN pip install --no-cache-dir \
@@ -47,7 +66,7 @@ RUN find /usr/local/lib/python3.11/site-packages -type d -name "tests" -exec rm 
     rm -rf /root/.cache/pip
 
 # ============================================================================
-# Stage 2: Runtime - Minimal final image
+# Stage 3: Runtime - Minimal final image
 # ============================================================================
 FROM python:3.11-slim
 
