@@ -1,0 +1,77 @@
+# Ultra-lightweight Railway Dockerfile
+# Multi-stage build for minimal image size (<3GB target)
+# CPU-only torch, aggressive cleanup
+
+# Build stage
+FROM python:3.10-slim-bullseye AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Copy project files
+COPY pyproject.toml setup.py MANIFEST.in ./
+COPY lightrag/ ./lightrag/
+
+# Install all dependencies in builder stage
+RUN pip install --no-cache-dir \
+    torch==2.1.0+cpu \
+    -f https://download.pytorch.org/whl/torch_stable.html && \
+    pip install --no-cache-dir \
+    transformers>=4.30.0 \
+    sentencepiece && \
+    pip install --no-cache-dir -e .[api]
+
+# Aggressive cleanup in builder
+RUN find /usr/local/lib/python3.10 -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+    find /usr/local/lib/python3.10 -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find /usr/local/lib/python3.10 -name "*.pyc" -delete && \
+    find /usr/local/lib/python3.10 -name "*.pyo" -delete && \
+    pip cache purge
+
+# Runtime stage - minimal final image
+FROM python:3.10-slim-bullseye
+
+WORKDIR /app
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /build/lightrag /app/lightrag
+COPY --from=builder /build/pyproject.toml /build/setup.py /app/
+
+# Verify installations
+RUN python -c "import torch; print(f'✅ Torch {torch.__version__} (CPU)')" && \
+    python -c "import transformers; print('✅ Transformers OK')" && \
+    python -c "from lightrag.llm.vietnamese_embed import vietnamese_embed; print('✅ Vietnamese embedding OK')"
+
+# Create data directories
+RUN mkdir -p /app/data/rag_storage /app/data/inputs
+
+# Environment variables
+ENV WORKING_DIR=/app/data/rag_storage \
+    INPUT_DIR=/app/data/inputs \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Expose port
+EXPOSE 9621
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:9621/health || exit 1
+
+# Start server
+CMD ["lightrag-server"]

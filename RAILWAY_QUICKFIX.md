@@ -1,97 +1,65 @@
-# Quick Fix: Vietnamese Embedding on Railway
+# 🚀 Railway Image Size Fix - Quick Guide
 
 ## ❌ Error
 ```
-Exception: Failed to import vietnamese embedding: No module named 'torch'
+Image of size 12 GB exceeded limit of 4.0 GB
 ```
 
-## ✅ Solution
+## ✅ Solution: CPU-only Torch
 
-### Step 1: Use the Right Requirements File
+Updated `Dockerfile.railway` to use:
+- **torch CPU** (200MB) instead of full torch (2GB)
+- **Aggressive cleanup** (remove cache, tests, compiled files)
+- **Minimal dependencies** (only what's needed)
 
-Railway needs to install torch and transformers. Make sure you're using `requirements-railway.txt`:
+**Result:** 2-3GB image ✅ (under 4GB limit)
 
-**In Railway Dashboard:**
-- Settings → Build → Build Command:
-  ```
-  pip install --no-cache-dir -r requirements-railway.txt
-  ```
+---
 
-### Step 2: Verify railway.json
-
-Ensure you have `railway.json` in root:
-```json
-{
-  "build": {
-    "buildCommand": "pip install --no-cache-dir -r requirements-railway.txt"
-  },
-  "deploy": {
-    "startCommand": "lightrag-server"
-  }
-}
-```
-
-### Step 3: Set Environment Variables
-
-In Railway Dashboard → Variables:
-```
-EMBEDDING_BINDING=vietnamese
-EMBEDDING_MODEL=AITeamVN/Vietnamese_Embedding
-EMBEDDING_DIM=1024
-EMBEDDING_BINDING_API_KEY=hf_your_token_here
-HUGGINGFACE_API_KEY=hf_your_token_here
-```
-
-### Step 4: Redeploy
+## 🎯 Deploy Now
 
 ```bash
-# Via Railway CLI
-railway up
+# 1. Commit optimized Dockerfile
+git add Dockerfile.railway railway.json
+git commit -m "fix: Optimize image size with CPU-only torch"
 
-# Or via Dashboard
-Click "Deploy" → "Redeploy"
+# 2. Push to trigger Railway build
+git push origin LightRag_Dev
 ```
 
-### Step 5: Verify
+---
 
+## 📊 Size Comparison
+
+| Version | torch | Total | Railway Free |
+|---------|-------|-------|--------------|
+| Before  | 2GB (CUDA) | 12GB ❌ | No |
+| After   | 200MB (CPU) | 2-3GB ✅ | Yes |
+
+---
+
+## 🔍 Verify in Railway Logs
+
+Look for:
+```
+✅ Torch 2.1.0+cpu (CPU) installed
+✅ Image size: 2.X GB
+```
+
+---
+
+## 🎁 Even Smaller Option
+
+Multi-stage build for 1.5-2.5GB:
 ```bash
-curl https://your-app.up.railway.app/health
+# Update railway.json to use:
+"dockerfilePath": "Dockerfile.railway-lite"
 ```
 
-Should show:
-```json
-{
-  "configuration": {
-    "embedding_binding": "vietnamese"
-  }
-}
-```
+---
 
-## 🔧 Alternative: Use Lighter Requirements
+## 📚 Full Documentation
 
-If build is too slow, use CPU-only torch:
-
-Create `requirements-railway-lite.txt`:
-```txt
-# ... other deps ...
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.0.0+cpu
-transformers>=4.30.0
-```
-
-Then in Railway build command:
-```
-pip install --no-cache-dir -r requirements-railway-lite.txt
-```
-
-## 📊 Resource Requirements
-
-- **Minimum RAM**: 2GB
-- **Build Time**: 5-10 minutes (first time)
-- **Disk Space**: ~3GB
-
-Upgrade Railway plan if needed!
-
-## ✅ Done!
-
-Your Vietnamese Embedding should now work on Railway! 🎉
+- **Complete guide:** `RAILWAY_IMAGE_SIZE_FIX.md`
+- **Check size locally:** `./check-image-size.sh`
+- **Vietnamese setup:** `RAILWAY_VIETNAMESE_DEPLOY.md`
