@@ -233,13 +233,14 @@ async def vietnamese_embed(
     model.eval()  # Set to evaluation mode
     
     try:
-        # Tokenize texts with max_length matching the model's training
-        # Vietnamese_Embedding was trained with max_length=2048
+        # Tokenize texts with optimized max_length for Railway CPU
+        # Using 512 instead of 2048 to reduce computation time
+        # Most texts are shorter than 512 tokens anyway
         encoded_input = tokenizer(
             texts,
             padding=True,
             truncation=True,
-            max_length=2048,
+            max_length=512,  # Reduced from 2048 for 4x speedup
             return_tensors="pt"
         ).to(device)
         
@@ -257,7 +258,7 @@ async def vietnamese_embed(
         else:
             embeddings_np = embeddings.cpu().numpy()
         
-        logger.debug(f"Generated embeddings for {len(texts)} texts, shape: {embeddings_np.shape}")
+        logger.debug(f"Generated embeddings for {len(texts)} texts (max_len=512), shape: {embeddings_np.shape}")
         return embeddings_np
         
     except Exception as e:
