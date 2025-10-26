@@ -154,14 +154,26 @@ def initialize_vietnamese_embedding_model(
         token = os.environ.get("HUGGINGFACE_API_KEY") or os.environ.get("HF_TOKEN")
     
     try:
-        # Use slow tokenizer to avoid PyPreTokenizerTypeWrapper enum error
-        # Fast tokenizer has compatibility issues with some model configs
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
-            token=token,
-            trust_remote_code=True,
-            use_fast=False  # Force slow tokenizer to avoid enum serialization error
-        )
+        # Try fast tokenizer first for better performance
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_name,
+                token=token,
+                trust_remote_code=True,
+                use_fast=True  # Try fast tokenizer first (10x faster)
+            )
+            logger.info("Vietnamese Embedding: Using fast tokenizer")
+        except Exception as fast_error:
+            # Fallback to slow tokenizer if fast fails (e.g., enum serialization error)
+            logger.warning(f"Fast tokenizer failed ({fast_error}), falling back to slow tokenizer")
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_name,
+                token=token,
+                trust_remote_code=True,
+                use_fast=False  # Force slow tokenizer as fallback
+            )
+            logger.info("Vietnamese Embedding: Using slow tokenizer (fallback)")
+        
         model = AutoModel.from_pretrained(
             model_name,
             token=token,
