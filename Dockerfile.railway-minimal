@@ -1,0 +1,97 @@
+# Ultra-optimized Railway Dockerfile
+# Multi-stage build + minimal requirements + aggressive cleanup
+# Target: <2.5GB
+
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM python:3.10-slim-bullseye AS builder
+
+WORKDIR /build
+
+# Install minimal build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip wheel setuptools
+
+# Copy requirements and install
+COPY requirements-railway-optimized.txt .
+RUN pip install --no-cache-dir -r requirements-railway-optimized.txt
+
+# Copy and install LightRAG (minimal installation)
+COPY pyproject.toml setup.py MANIFEST.in ./
+COPY lightrag/ ./lightrag/
+
+# Install LightRAG without extra dependencies (we already have them)
+RUN pip install --no-cache-dir --no-deps -e .
+
+# Ultra-aggressive cleanup
+RUN echo "Cleaning up..." && \
+    # Remove test files
+    find /usr/local/lib/python3.10/site-packages -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+    find /usr/local/lib/python3.10/site-packages -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove example files
+    find /usr/local/lib/python3.10/site-packages -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove documentation
+    find /usr/local/lib/python3.10/site-packages -type d -name "docs" -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove benchmarks
+    find /usr/local/lib/python3.10/site-packages -type d -name "benchmarks" -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove __pycache__
+    find /usr/local/lib/python3.10/site-packages -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove .pyc, .pyo files
+    find /usr/local/lib/python3.10/site-packages -name "*.pyc" -delete && \
+    find /usr/local/lib/python3.10/site-packages -name "*.pyo" -delete && \
+    # Remove .pyd files (Windows binaries)
+    find /usr/local/lib/python3.10/site-packages -name "*.pyd" -delete && \
+    # Strip shared libraries
+    find /usr/local/lib/python3.10/site-packages -name "*.so" -type f -exec strip --strip-unneeded {} + 2>/dev/null || true && \
+    # Remove pip cache
+    pip cache purge && \
+    rm -rf /root/.cache/pip && \
+    echo "Cleanup complete"
+
+# ============================================================================
+# Stage 2: Runtime (minimal)
+# ============================================================================
+FROM python:3.10-slim-bullseye
+
+WORKDIR /app
+
+# Install ONLY essential runtime packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy Python packages from builder
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application
+COPY --from=builder /build/lightrag /app/lightrag
+COPY --from=builder /build/pyproject.toml /build/setup.py /app/
+
+# Verify critical imports
+RUN python -c "import torch; print(f'✅ torch {torch.__version__}')" && \
+    python -c "import transformers; print('✅ transformers')" && \
+    python -c "from lightrag.llm.vietnamese_embed import vietnamese_embed; print('✅ Vietnamese embedding')"
+
+# Create data directories
+RUN mkdir -p /app/data/rag_storage /app/data/inputs
+
+# Environment
+ENV WORKING_DIR=/app/data/rag_storage \
+    INPUT_DIR=/app/data/inputs \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+EXPOSE 9621
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:9621/health || exit 1
+
+CMD ["lightrag-server"]

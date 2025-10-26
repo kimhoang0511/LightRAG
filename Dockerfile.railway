@@ -1,17 +1,18 @@
 # Railway-optimized Dockerfile for LightRAG with Vietnamese Embedding
-# Optimized for size: CPU-only torch, minimal dependencies, cleanup
-# Target: <4GB for Railway free tier
+# Multi-stage build for minimal image size
+# Target: <3GB for Railway free tier
 
-FROM python:3.10-slim-bullseye
+# ============================================================================
+# Stage 1: Builder - Install all dependencies
+# ============================================================================
+FROM python:3.10-slim-bullseye AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-# Install minimal system dependencies
+# Install build dependencies (only in builder stage)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
@@ -20,51 +21,68 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 COPY pyproject.toml setup.py MANIFEST.in ./
 COPY lightrag/ ./lightrag/
 
-# Install PyTorch CPU-only (much smaller than CUDA version)
-# torch CPU: ~200MB vs torch+CUDA: ~2GB
-RUN echo "🔧 Installing PyTorch CPU-only (optimized for size)..." && \
-    pip install --no-cache-dir \
-        torch==2.1.0+cpu \
-        -f https://download.pytorch.org/whl/torch_stable.html && \
-    echo "✅ PyTorch CPU installed"
+# Install PyTorch CPU-only with specific version
+RUN pip install --no-cache-dir \
+    torch==2.1.0+cpu \
+    -f https://download.pytorch.org/whl/torch_stable.html
 
 # Install transformers with minimal dependencies
-RUN echo "🔧 Installing Transformers..." && \
-    pip install --no-cache-dir \
-        transformers>=4.30.0 \
-        sentencepiece \
-        && \
-    echo "✅ Transformers installed"
+RUN pip install --no-cache-dir \
+    transformers==4.35.0 \
+    sentencepiece==0.1.99 \
+    tokenizers==0.15.0
 
-# Install LightRAG with API dependencies (excluding torch/transformers already installed)
-RUN echo "🔧 Installing LightRAG..." && \
-    pip install --no-cache-dir -e .[api] && \
-    echo "✅ LightRAG installed"
+# Install LightRAG dependencies WITHOUT dev/test packages
+RUN pip install --no-cache-dir -e .[api]
 
-# Clean up pip cache and unnecessary files to reduce image size
-RUN echo "🧹 Cleaning up..." && \
+# Aggressive cleanup in builder stage
+RUN find /usr/local/lib/python3.10/site-packages -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+    find /usr/local/lib/python3.10/site-packages -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
+    find /usr/local/lib/python3.10/site-packages -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find /usr/local/lib/python3.10/site-packages -name "*.pyc" -delete && \
+    find /usr/local/lib/python3.10/site-packages -name "*.pyo" -delete && \
+    find /usr/local/lib/python3.10/site-packages -name "*.pyd" -delete && \
+    find /usr/local/lib/python3.10/site-packages -name "*.so" -type f -exec strip {} + 2>/dev/null || true && \
     pip cache purge && \
-    find /usr/local/lib/python3.10 -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
-    find /usr/local/lib/python3.10 -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
-    find /usr/local/lib/python3.10 -name "*.pyc" -delete && \
-    find /usr/local/lib/python3.10 -name "*.pyo" -delete && \
-    rm -rf /root/.cache/pip && \
-    echo "✅ Cleanup completed"
+    rm -rf /root/.cache/pip
+
+# ============================================================================
+# Stage 2: Runtime - Minimal final image
+# ============================================================================
+FROM python:3.10-slim-bullseye
+
+WORKDIR /app
+
+# Install ONLY runtime dependencies (no build-essential)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && rm -rf /var/cache/apt/*
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application code
+COPY --from=builder /build/lightrag /app/lightrag
+COPY --from=builder /build/pyproject.toml /build/setup.py /app/
 
 # Verify installations
-RUN echo "🔍 Verifying installations..." && \
-    python -c "import torch; print(f'✅ Torch {torch.__version__} (CPU) installed')" && \
-    python -c "import transformers; print(f'✅ Transformers installed')" && \
-    python -c "from lightrag.llm.vietnamese_embed import vietnamese_embed; print('✅ Vietnamese embedding ready')" && \
-    echo "✅ All verifications passed"
+RUN python -c "import sys; print(f'Python: {sys.version}')" && \
+    python -c "import torch; print(f'✅ Torch {torch.__version__} (CPU-only)')" && \
+    python -c "import transformers; print(f'✅ Transformers OK')" && \
+    python -c "from lightrag.llm.vietnamese_embed import vietnamese_embed; print('✅ Vietnamese embedding ready')"
 
 # Create data directories
 RUN mkdir -p /app/data/rag_storage /app/data/inputs
 
 # Environment variables
-ENV WORKING_DIR=/app/data/rag_storage
-ENV INPUT_DIR=/app/data/inputs
-ENV PYTHONUNBUFFERED=1
+ENV WORKING_DIR=/app/data/rag_storage \
+    INPUT_DIR=/app/data/inputs \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
 # Expose port
 EXPOSE 9621
