@@ -292,6 +292,7 @@ def create_app(args):
         "azure_openai",
         "aws_bedrock",
         "jina",
+        "vietnamese",
     ]:
         raise Exception("embedding binding not supported")
 
@@ -594,6 +595,12 @@ def create_app(args):
 
                     return await jina_embed(
                         texts, dimensions=dimensions, base_url=host, api_key=api_key
+                    )
+                elif binding == "vietnamese":
+                    from lightrag.llm.vietnamese_embed import vietnamese_embed
+
+                    return await vietnamese_embed(
+                        texts, model_name=model, token=api_key
                     )
                 else:  # openai and compatible
                     from lightrag.llm.openai import openai_embed
