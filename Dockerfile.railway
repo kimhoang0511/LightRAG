@@ -9,10 +9,11 @@ FROM oven/bun:1 AS frontend-builder
 
 WORKDIR /app
 
-# Copy frontend source
+# Copy frontend source AND create target directory structure
 COPY lightrag_webui/ ./lightrag_webui/
+RUN mkdir -p ./lightrag/api
 
-# Build frontend
+# Build frontend (vite will output to ../lightrag/api/webui)
 RUN cd lightrag_webui && \
     bun install --frozen-lockfile && \
     bun run build && \
@@ -37,8 +38,8 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 COPY pyproject.toml setup.py MANIFEST.in ./
 COPY lightrag/ ./lightrag/
 
-# Copy built frontend from frontend-builder
-COPY --from=frontend-builder /app/lightrag_webui/dist ./lightrag/api/webui
+# Copy built frontend from frontend-builder (vite builds to ../lightrag/api/webui)
+COPY --from=frontend-builder /app/lightrag/api/webui ./lightrag/api/webui
 
 # Install PyTorch CPU-only with specific version
 RUN pip install --no-cache-dir \
