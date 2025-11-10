@@ -15,6 +15,7 @@ from openai import (
     APIConnectionError,
     RateLimitError,
     APITimeoutError,
+    InternalServerError,
 )
 from tenacity import (
     retry,
@@ -100,6 +101,7 @@ def create_openai_async_client(
         retry_if_exception_type(RateLimitError)
         | retry_if_exception_type(APIConnectionError)
         | retry_if_exception_type(APITimeoutError)
+        | retry_if_exception_type(InternalServerError)
         | retry_if_exception_type(InvalidResponseError)
     ),
 )
@@ -571,6 +573,7 @@ async def nvidia_openai_complete(
         retry_if_exception_type(RateLimitError)
         | retry_if_exception_type(APIConnectionError)
         | retry_if_exception_type(APITimeoutError)
+        | retry_if_exception_type(InternalServerError)
     ),
 )
 async def openai_embed(
