@@ -1,0 +1,1723 @@
+{
+  "name": "My workflow 5",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.query }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Bạn là một trợ lý AI. Hãy output_1 và output_2 với nội dung sau:\n\n1. Giải thích OUTPUT_1: Nhiệm vụ của bạn là phân tích câu truy vấn của người dùng (bằng tiếng Việt) để xác định xem câu hỏi đó có liên quan đến những vấn đề sau hay không?\n- Liên quan đến TỔ CHỨC NHÂN SỰ \n- liên quan đến NỘI QUY LÀM VIỆC\n- liên quan đến QUY TRÌNH LÀM VIỆC\n- liên quan đến THÔNG TIN DOANH NGHIỆP/CÔNG TY\nNếu đúng thì hãy tóm tắt tất cả lịch sử ngữ cảnh thành truy vấn hoàn chỉnh phù hợp.\n\nGHI CHÚ output_1:\n - Output chỉ chứa câu hỏi hoàn chỉnh\n - Định dạng output_1 đảm bảo chắc chắn kiểu json như sau:\n      {\"output_1\" : \"câu hỏi hoàn chỉnh\"}\n\n\n2. Giải thích OUTPUT_2: Tiếp tục xác định câu hỏi (bằng tiếng việt) có liên quan đến truy vấn xử lý số liệu (doanh thu, đơn đặt hàng, bán hàng, mua hàng ... ) hoặc cần liệt kê danh sách(email, khách hàng, sản phẩm, nhân viên ...) lấy từ database không?\nNếu đúng thì hãy tóm tắt tất cả lịch sử ngữ cảnh thành câu truy vấn hoàn chỉnh phù hợp.\n\nGHI CHÚ output_2:\n - Output chỉ chứa câu hỏi hoàn chỉnh\n - Định dạng output_2 đảm bảo chắc chắn kiểu json như sau:\n     {\"output_2\" : \"câu hỏi hoàn chỉnh\"}\n\n3. Giải thích OUTPUT_3: Tiếp tục xác định có phải người dùng yêu cầu gửi email không?\nNếu đúng thì hãy tóm tắt tất cả lịch sử ngữ cảnh và output_3\n\nGHI CHÚ output_3: \n - Định dạng output_3 đảm bảo chắc chắn output json như sau:\n     {\n  \"output_3\": {\n    \"subject\": Chủ đề nhận email,\n    \"recipients\": Tên một hoặc nhiều nhân viên(nếu có),\n    \"department\": Phòng ban nhận mail(nếu có),\n    \"content\": Nội dung nhận mail\n  }\n}\n\n\nCHÚ Ý QUAN TRỌNG:\n- ĐẢM BẢO, CHẮC CHẮN chỉ Output 1 trong 3. Câu truy vấn nào liên quan hơn thì chọn output đó. \n- Nếu cả 3 output đều không liên quan thì không output gì cả."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        5488
+      ],
+      "id": "33f53399-3a20-4fa7-afe0-606c208aa7bc",
+      "name": "AI Agent",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "notes": "Phân tích câu hỏi có nằm trong nhóm cần trả lời không? \nNhóm 1: hỏi về thông tin doanh nghiệp\nNhóm 2: Tổng hợp số liệu nội bộ"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=123",
+        "contextWindowLength": 6
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        3104,
+        5744
+      ],
+      "id": "9f20a020-1f82-460c-b4ee-225d8e06b1cb",
+      "name": "Simple Memory",
+      "notesInFlow": false,
+      "notes": "bộ nhớ lưu trữ lịch sử ngữ cảnh.\nCài đặt Context Window Length gửi đến LLM số ngữ cảnh gần nhất để LLM tổng hợp câu hỏi hoàn thiện cuối cùng"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2816,
+        5696
+      ],
+      "id": "708f39d5-2aef-46ea-aaf6-413bb39bf554",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "bVz8PEdQYSDI7jq8",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vanna-production.up.railway.app/api/v0/clear_training_data",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "6de22698-d79c-48d2-9d61-79392a652b76",
+      "name": "Clear Training Data1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2976,
+        7408
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://vanna-production.up.railway.app/api/v0/generate_sql",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "question",
+              "value": "danh sách email nguyễn thị a và trần thị c"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4d7140f1-e811-4784-b0ad-8491ec0a676b",
+      "name": "TEST GEN SQL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2304,
+        7888
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://vanna-production.up.railway.app/api/v0/generate_sql",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "question",
+              "value": "=danh"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "331a5d7e-fe09-416c-aa9e-ffaa1729d19b",
+      "name": "TEST ASK",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2320,
+        8256
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "5de23b90-9e2f-488c-bca6-bbce9ef42263",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        2256,
+        7408
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Training Data từ MyDLL.md\nconst trainingData = {\n  \"training_data\": [\n    // ====================================================================\n    // 1. DDL - Database Schemas\n    // ====================================================================\n    {\n      \"ddl\": `CREATE TABLE customer (\n    customer_id SERIAL PRIMARY KEY,\n    customer_name TEXT NOT NULL,\n    address TEXT,\n    phone_number VARCHAR(20),\n    debt NUMERIC(18,2) DEFAULT 0\n);`\n    },\n    {\n      \"ddl\": `CREATE TABLE product (\n    product_id SERIAL PRIMARY KEY,\n    product_name TEXT NOT NULL,\n    stock_quantity INT DEFAULT 0,\n    sale_price NUMERIC(18,2) NOT NULL,\n    import_price NUMERIC(18,2) NOT NULL\n);`\n    },\n    {\n      \"ddl\": `CREATE TABLE employee (\n    employee_id SERIAL PRIMARY KEY,\n    employee_name TEXT NOT NULL,\n    address TEXT,\n    email TEXT,\n    phone_number VARCHAR(20),\n    department TEXT\n);`\n    },\n    {\n      \"ddl\": `CREATE TABLE sales_detail (\n    sale_id SERIAL PRIMARY KEY,\n    customer_id INT REFERENCES customer(customer_id),\n    product_id INT REFERENCES product(product_id),\n    sale_date DATE NOT NULL,\n    sale_price NUMERIC(18,2) NOT NULL,\n    employee_id INT REFERENCES employee(employee_id)\n);`\n    },\n    \n    // ====================================================================\n    // 2. Documentation - Business Logic\n    // ====================================================================\n    {\n      \"documentation\": `Bảng customer - Thông tin khách hàng:\n- customer_id: Mã định danh duy nhất của khách hàng (Primary Key)\n- customer_name: Tên hoặc tên tổ chức khách hàng\n- address: Địa chỉ khách hàng\n- phone_number: Số điện thoại liên hệ (VARCHAR 20 ký tự)\n- debt: Số nợ hiện tại của khách hàng (VNĐ, mặc định 0)\n\nMối quan hệ: Liên kết 1:N với bảng sales_detail qua customer_id`\n    },\n    {\n      \"documentation\": `Bảng product - Thông tin hàng hóa:\n- product_id: Mã định danh duy nhất của sản phẩm (Primary Key)\n- product_name: Tên sản phẩm (VD: Máy giặt LG 9kg)\n- stock_quantity: Số lượng tồn kho hiện có\n- sale_price: Giá bán ra cho khách hàng (VNĐ)\n- import_price: Giá nhập hàng (VNĐ)\n\nMối quan hệ: Liên kết 1:N với bảng sales_detail qua product_id\nLưu ý: Lợi nhuận = sale_price - import_price`\n    },\n    {\n      \"documentation\": `Bảng employee - Thông tin nhân viên:\n- employee_id: Mã định danh duy nhất của nhân viên (Primary Key)\n- employee_name: Tên nhân viên\n- address: Địa chỉ nhân viên\n- email: Địa chỉ email liên hệ\n- phone_number: Số điện thoại\n- department: Phòng ban (VD: Kinh doanh, Kế toán, Marketing)\n\nMối quan hệ: Liên kết 1:N với bảng sales_detail qua employee_id`\n    },\n    {\n      \"documentation\": `Bảng sales_detail - Chi tiết giao dịch bán hàng (FACT TABLE):\n- sale_id: Mã định danh duy nhất của giao dịch (Primary Key)\n- customer_id: Mã khách hàng mua hàng (Foreign Key → customer)\n- product_id: Mã sản phẩm được bán (Foreign Key → product)\n- sale_date: Ngày diễn ra giao dịch\n- sale_price: Giá bán thực tế trong giao dịch này (VNĐ)\n- employee_id: Mã nhân viên thực hiện bán hàng (Foreign Key → employee)\n\nĐây là bảng trung tâm (fact table) liên kết 3 bảng: customer, product, employee`\n    },\n    {\n      \"documentation\": `Cấu trúc database (ERD):\ncustomer (1) ───< sales_detail >───(1) product\n                       │\n                       │\n                       v\n                   employee\n\nMỗi khách hàng, sản phẩm và nhân viên đều có thể tham gia nhiều giao dịch trong bảng sales_detail.\nĐây là mô hình Star Schema với sales_detail là fact table.`\n    },\n    {\n      \"documentation\": `Lưu ý quan trọng khi viết SQL:\n1. Bảng sales_detail là bảng trung tâm, thường cần JOIN với các bảng khác\n2. Để tính doanh thu: SUM(sale_price) từ sales_detail\n3. Để tính lợi nhuận: SUM(sale_price - import_price) cần JOIN với product\n4. Ngày giao dịch được lưu trong trường sale_date (kiểu DATE)\n5. Tất cả giá trị tiền tệ đều là NUMERIC(18,2) - đơn vị VNĐ\n6. Tồn kho được quản lý trong product.stock_quantity`\n    },\n    {\n      \"documentation\": `Best practices khi query:\n1. JOIN customer để lấy tên khách hàng thay vì chỉ customer_id\n2. JOIN product để lấy tên sản phẩm thay vì chỉ product_id\n3. JOIN employee để lấy tên nhân viên thay vì chỉ employee_id\n4. Sử dụng COALESCE(SUM(...), 0) để xử lý NULL khi không có dữ liệu\n5. Format ngày tháng: TO_CHAR(sale_date, 'YYYY-MM-DD')\n6. Filter theo năm: EXTRACT(YEAR FROM sale_date) = 2024\n7. Filter theo tháng: EXTRACT(MONTH FROM sale_date) = 10`\n    },\n    \n    // ====================================================================\n    // 3. Question-SQL Pairs\n    // ====================================================================\n    \n    // --- Khách hàng ---\n    {\n      \"question\": \"Liệt kê tất cả khách hàng\",\n      \"sql\": \"SELECT customer_id, customer_name, address, phone_number, debt FROM customer ORDER BY customer_name;\"\n    },\n    {\n      \"question\": \"Top 10 khách hàng có doanh thu cao nhất\",\n      \"sql\": `SELECT \n    c.customer_name,\n    SUM(sd.sale_price) as total_revenue\nFROM customer c\nJOIN sales_detail sd ON c.customer_id = sd.customer_id\nGROUP BY c.customer_id, c.customer_name\nORDER BY total_revenue DESC\nLIMIT 10;`\n    },\n    {\n      \"question\": \"Khách hàng nào đang nợ tiền?\",\n      \"sql\": \"SELECT customer_name, debt FROM customer WHERE debt > 0 ORDER BY debt DESC;\"\n    },\n    {\n      \"question\": \"Tổng số nợ của tất cả khách hàng\",\n      \"sql\": \"SELECT COALESCE(SUM(debt), 0) as total_debt FROM customer;\"\n    },\n    {\n      \"question\": \"Khách hàng mua nhiều sản phẩm nhất\",\n      \"sql\": `SELECT \n    c.customer_name,\n    COUNT(sd.sale_id) as total_purchases\nFROM customer c\nJOIN sales_detail sd ON c.customer_id = sd.customer_id\nGROUP BY c.customer_id, c.customer_name\nORDER BY total_purchases DESC\nLIMIT 1;`\n    },\n    \n    // --- Sản phẩm ---\n    {\n      \"question\": \"Liệt kê tất cả sản phẩm\",\n      \"sql\": \"SELECT product_id, product_name, stock_quantity, sale_price, import_price FROM product ORDER BY product_name;\"\n    },\n    {\n      \"question\": \"Sản phẩm nào đang hết hàng?\",\n      \"sql\": \"SELECT product_name, stock_quantity FROM product WHERE stock_quantity = 0 ORDER BY product_name;\"\n    },\n    {\n      \"question\": \"Sản phẩm nào có tồn kho ít hơn 10?\",\n      \"sql\": \"SELECT product_name, stock_quantity FROM product WHERE stock_quantity < 10 ORDER BY stock_quantity;\"\n    },\n    {\n      \"question\": \"Top 5 sản phẩm bán chạy nhất\",\n      \"sql\": `SELECT \n    p.product_name,\n    COUNT(sd.sale_id) as total_sales\nFROM product p\nJOIN sales_detail sd ON p.product_id = sd.product_id\nGROUP BY p.product_id, p.product_name\nORDER BY total_sales DESC\nLIMIT 5;`\n    },\n    {\n      \"question\": \"Sản phẩm nào có lợi nhuận cao nhất?\",\n      \"sql\": `SELECT \n    p.product_name,\n    (p.sale_price - p.import_price) as profit_per_unit,\n    p.sale_price,\n    p.import_price\nFROM product p\nORDER BY profit_per_unit DESC\nLIMIT 1;`\n    },\n    {\n      \"question\": \"Tổng giá trị hàng tồn kho\",\n      \"sql\": \"SELECT SUM(stock_quantity * import_price) as total_inventory_value FROM product;\"\n    },\n    \n    // --- Nhân viên ---\n    {\n      \"question\": \"Liệt kê tất cả nhân viên\",\n      \"sql\": \"SELECT employee_id, employee_name, department, email, phone_number FROM employee ORDER BY employee_name;\"\n    },\n    {\n      \"question\": \"Nhân viên nào bán được nhiều đơn hàng nhất?\",\n      \"sql\": `SELECT \n    e.employee_name,\n    e.department,\n    COUNT(sd.sale_id) as total_sales\nFROM employee e\nJOIN sales_detail sd ON e.employee_id = sd.employee_id\nGROUP BY e.employee_id, e.employee_name, e.department\nORDER BY total_sales DESC\nLIMIT 1;`\n    },\n    {\n      \"question\": \"Top 10 nhân viên theo doanh thu\",\n      \"sql\": `SELECT \n    e.employee_name,\n    e.department,\n    SUM(sd.sale_price) as total_revenue\nFROM employee e\nJOIN sales_detail sd ON e.employee_id = sd.employee_id\nGROUP BY e.employee_id, e.employee_name, e.department\nORDER BY total_revenue DESC\nLIMIT 10;`\n    },\n    {\n      \"question\": \"Có bao nhiêu nhân viên trong mỗi phòng ban?\",\n      \"sql\": \"SELECT department, COUNT(*) as employee_count FROM employee GROUP BY department ORDER BY employee_count DESC;\"\n    },\n    {\n      \"question\": \"Danh sách email phòng kinh doanh\",\n      \"sql\": \"select * from employee where department ILIKE ('%kinh doanh%'); loại bỏ chữ 'phòng' hoặc 'phòng ban' trong điều kiện lọc\"\n    },\n    {\n      \"question\": \"Xem email của nhân viên nguyễn văn a\",\n      \"sql\": \"select * from employee where employee_name ILIKE ('%nguyễn văn a%');\"\n    },\n    \n    // --- Giao dịch ---\n    {\n      \"question\": \"Tổng doanh thu là bao nhiêu?\",\n      \"sql\": \"SELECT COALESCE(SUM(sale_price), 0) as total_revenue FROM sales_detail;\"\n    },\n    {\n      \"question\": \"Có bao nhiêu giao dịch trong hệ thống?\",\n      \"sql\": \"SELECT COUNT(*) as total_transactions FROM sales_detail;\"\n    },\n    {\n      \"question\": \"Doanh thu theo từng tháng trong năm 2024\",\n      \"sql\": `SELECT \n    EXTRACT(MONTH FROM sale_date) as month,\n    SUM(sale_price) as monthly_revenue\nFROM sales_detail\nWHERE EXTRACT(YEAR FROM sale_date) = 2024\nGROUP BY month\nORDER BY month;`\n    },\n    {\n      \"question\": \"Doanh thu hôm nay\",\n      \"sql\": \"SELECT COALESCE(SUM(sale_price), 0) as today_revenue FROM sales_detail WHERE sale_date = CURRENT_DATE;\"\n    },\n    {\n      \"question\": \"Doanh thu tháng này\",\n      \"sql\": `SELECT COALESCE(SUM(sale_price), 0) as month_revenue \nFROM sales_detail \nWHERE EXTRACT(YEAR FROM sale_date) = EXTRACT(YEAR FROM CURRENT_DATE)\nAND EXTRACT(MONTH FROM sale_date) = EXTRACT(MONTH FROM CURRENT_DATE);`\n    },\n    {\n      \"question\": \"Doanh thu năm nay\",\n      \"sql\": `SELECT COALESCE(SUM(sale_price), 0) as year_revenue \nFROM sales_detail \nWHERE EXTRACT(YEAR FROM sale_date) = EXTRACT(YEAR FROM CURRENT_DATE);`\n    },\n    {\n      \"question\": \"10 giao dịch gần nhất\",\n      \"sql\": `SELECT \n    sd.sale_id,\n    c.customer_name,\n    p.product_name,\n    sd.sale_price,\n    sd.sale_date,\n    e.employee_name\nFROM sales_detail sd\nJOIN customer c ON sd.customer_id = c.customer_id\nJOIN product p ON sd.product_id = p.product_id\nJOIN employee e ON sd.employee_id = e.employee_id\nORDER BY sd.sale_date DESC, sd.sale_id DESC\nLIMIT 10;`\n    },\n    {\n      \"question\": \"Tổng lợi nhuận từ tất cả giao dịch\",\n      \"sql\": `SELECT \n    SUM(sd.sale_price - p.import_price) as total_profit\nFROM sales_detail sd\nJOIN product p ON sd.product_id = p.product_id;`\n    },\n    {\n      \"question\": \"Doanh thu và lợi nhuận theo sản phẩm\",\n      \"sql\": `SELECT \n    p.product_name,\n    COUNT(sd.sale_id) as total_sales,\n    SUM(sd.sale_price) as total_revenue,\n    SUM(sd.sale_price - p.import_price) as total_profit\nFROM product p\nJOIN sales_detail sd ON p.product_id = sd.product_id\nGROUP BY p.product_id, p.product_name\nORDER BY total_revenue DESC;`\n    },\n    \n    // --- Queries phức tạp ---\n    {\n      \"question\": \"Phân tích doanh thu theo khách hàng và sản phẩm\",\n      \"sql\": `SELECT \n    c.customer_name,\n    p.product_name,\n    COUNT(sd.sale_id) as purchase_count,\n    SUM(sd.sale_price) as total_spent\nFROM sales_detail sd\nJOIN customer c ON sd.customer_id = c.customer_id\nJOIN product p ON sd.product_id = p.product_id\nGROUP BY c.customer_id, c.customer_name, p.product_id, p.product_name\nORDER BY total_spent DESC\nLIMIT 20;`\n    },\n    {\n      \"question\": \"Top 5 ngày có doanh thu cao nhất\",\n      \"sql\": `SELECT \n    sale_date,\n    COUNT(sale_id) as transaction_count,\n    SUM(sale_price) as daily_revenue\nFROM sales_detail\nGROUP BY sale_date\nORDER BY daily_revenue DESC\nLIMIT 5;`\n    },\n    {\n      \"question\": \"Tỉ lệ lợi nhuận trung bình theo sản phẩm\",\n      \"sql\": `SELECT \n    p.product_name,\n    AVG((sd.sale_price - p.import_price) / NULLIF(p.import_price, 0) * 100) as avg_profit_margin\nFROM product p\nJOIN sales_detail sd ON p.product_id = sd.product_id\nGROUP BY p.product_id, p.product_name\nORDER BY avg_profit_margin DESC;`\n    },\n    {\n      \"question\": \"Hiệu suất bán hàng theo phòng ban\",\n      \"sql\": `SELECT \n    e.department,\n    COUNT(DISTINCT e.employee_id) as employee_count,\n    COUNT(sd.sale_id) as total_sales,\n    SUM(sd.sale_price) as total_revenue\nFROM employee e\nJOIN sales_detail sd ON e.employee_id = sd.employee_id\nGROUP BY e.department\nORDER BY total_revenue DESC;`\n    }\n  ]\n};\n\n// Return data cho node tiếp theo\nreturn [{ json: trainingData }];"
+      },
+      "id": "27b3a4e9-a34e-4cca-82da-568aa30821bf",
+      "name": "Training Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2656,
+        7408
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vanna-production.up.railway.app/api/v0/train_batch",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "training_data",
+              "value": "={{ $('Training Data').item.json.training_data }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "4b1fff23-1195-4e65-a2be-632b8e7e04d2",
+      "name": "Train Batch API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3296,
+        7408
+      ]
+    },
+    {
+      "parameters": {
+        "content": "BÀI 1: TEST System Message\nVào node model set \"Credential to connect with\" -> chưa có thì edit thêm vào gồm host, api key\n",
+        "height": 480,
+        "width": 1280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        5392
+      ],
+      "id": "003ffeda-79c9-4fa9-86f4-e1fb7f92d06b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "BÀI 2: Test gọi api truy vấn vào hệ thống lightRAG",
+        "height": 352,
+        "width": 816
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2272,
+        6000
+      ],
+      "id": "ccb33a78-454e-4d19-92d2-83cb88cc6041",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output_1 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "id": "2c9752e6-c937-4f9a-9cd5-9e29d06f3dd1"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "eea80cc5-a0f6-49b0-ac1a-6380967bc417",
+                    "leftValue": "={{ $json.output_2 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "516312ab-e83d-4a1b-a4fa-324d04e6972a",
+                    "leftValue": "={{ $json.output_3 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3648,
+        5456
+      ],
+      "id": "de69b34d-ee11-4224-a992-326d97f2e1ae",
+      "name": "Switch",
+      "notesInFlow": false,
+      "notes": "Lấy giá trị output1 và output2 để rẽ nhánh flow phù hợp"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy input data\nlet raw = $input.item.json.output || $input.item.json || items[0].json.output || items[0].json;\n\n// Nếu raw là array, lấy phần tử đầu tiên\nif (Array.isArray(raw)) {\n  raw = raw[0];\n}\n\n// Nếu raw là object có property output, lấy output\nif (typeof raw === 'object' && raw.output) {\n  raw = raw.output;\n}\n\n// Convert sang string nếu cần\nraw = typeof raw === 'string' ? raw : JSON.stringify(raw);\n\nlet output_1 = null;\nlet output_2 = null;\nlet output_3 = null;\n\ntry {\n  // Thử parse trực tiếp nếu là JSON thuần\n  let parsedData = JSON.parse(raw);\n  \n  output_1 = parsedData.output_1 || null;\n  output_2 = parsedData.output_2 || null;\n  output_3 = parsedData.output_3 || null;\n  \n} catch (e) {\n  // Nếu không parse được, thử extract từ markdown code block\n  const jsonMatch = raw.match(/```json\\s*\\n?([\\s\\S]*?)\\n?```/);\n  \n  if (jsonMatch) {\n    try {\n      const parsedData = JSON.parse(jsonMatch[1]);\n      output_1 = parsedData.output_1 || null;\n      output_2 = parsedData.output_2 || null;\n      output_3 = parsedData.output_3 || null;\n    } catch (parseError) {\n      console.log('Error parsing JSON from markdown:', parseError);\n    }\n  } else {\n    // Fallback: thử dùng regex để extract từng output\n    const match1 = raw.match(/\"output_1\"\\s*:\\s*({[^}]*}|\"[^\"]*\"|null)/);\n    const match2 = raw.match(/\"output_2\"\\s*:\\s*({[^}]*}|\"[^\"]*\"|null)/);\n    const match3 = raw.match(/\"output_3\"\\s*:\\s*({[^}]*}|\"[^\"]*\"|null)/);\n    \n    output_1 = match1 ? (match1[1] === 'null' ? null : JSON.parse(match1[1])) : null;\n    output_2 = match2 ? (match2[1] === 'null' ? null : JSON.parse(match2[1])) : null;\n    output_3 = match3 ? (match3[1] === 'null' ? null : JSON.parse(match3[1])) : null;\n  }\n}\n\nreturn [{\n  json: {\n    output_1,\n    output_2,\n    output_3\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        5488
+      ],
+      "id": "6a15ea2e-d227-482b-af20-0f57614620f6",
+      "name": "output1_output3",
+      "notes": "Xử lý lấy giá trị output1 và output2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lightrag-production-1f13.up.railway.app/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": {{ $json.query.toJsonString() }},\n  \"mode\": \"mix\",\n  \"only_need_context\": false,\n  \"only_need_prompt\": false,\n  \"response_type\": \"string\",\n  \"top_k\": 2,\n  \"chunk_top_k\": 2,\n  \"max_total_tokens\": 2000,\n  \"include_references\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2752,
+        6112
+      ],
+      "id": "d0e2f99e-e914-4027-834c-156b2e503e4b",
+      "name": "lightRAG"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "508c4a6f-9a95-48c6-b362-5d2fb5366bb4",
+              "name": "query",
+              "value": "thông tin về ông lê phú",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2400,
+        6112
+      ],
+      "id": "3b2c8b94-7105-47c1-87a4-b31766d6d054",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "508c4a6f-9a95-48c6-b362-5d2fb5366bb4",
+              "name": "query",
+              "value": "cty ấy có bao nhiêu thành thành  viên?",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2448,
+        5488
+      ],
+      "id": "fcaf5921-5138-4b4e-ab64-1c543d5bf8f8",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.query }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Bạn là một trợ lý AI. Hãy output_1 và output_2 với nội dung sau:\n\n1. Giải thích OUTPUT_1: Nhiệm vụ của bạn là phân tích câu truy vấn của người dùng (bằng tiếng Việt) để xác định xem câu hỏi đó có liên quan đến những vấn đề sau hay không?\n- Liên quan đến TỔ CHỨC NHÂN SỰ \n- liên quan đến NỘI QUY LÀM VIỆC\n- liên quan đến QUY TRÌNH LÀM VIỆC\n- liên quan đến THÔNG TIN DOANH NGHIỆP/CÔNG TY\nNếu đúng thì hãy tóm tắt tất cả lịch sử ngữ cảnh thành truy vấn hoàn chỉnh phù hợp.\n\nGHI CHÚ output_1:\n - Output chỉ chứa câu hỏi hoàn chỉnh\n - Định dạng output_1 đảm bảo chắc chắn kiểu json như sau:\n      {\"output_1\" : \"câu hỏi hoàn chỉnh\"}\n\n\n2. Giải thích OUTPUT_2: Tiếp tục xác định câu hỏi (bằng tiếng việt) có liên quan đến truy vấn xử lý số liệu (doanh thu, đơn đặt hàng, bán hàng, mua hàng ... ) hoặc cần liệt kê danh sách(email, khách hàng, sản phẩm, nhân viên ...) lấy từ database không?\nNếu đúng thì hãy tóm tắt tất cả lịch sử ngữ cảnh thành câu truy vấn hoàn chỉnh phù hợp.\n\nGHI CHÚ output_2:\n - Output chỉ chứa câu hỏi hoàn chỉnh\n - Định dạng output_2 đảm bảo chắc chắn kiểu json như sau:\n     {\"output_2\" : \"câu hỏi hoàn chỉnh\"}\n\n3. Giải thích OUTPUT_3: Tiếp tục xác định có phải người dùng yêu cầu gửi email không?\nNếu đúng thì hãy tóm tắt tất cả lịch sử ngữ cảnh và output_3\n\nGHI CHÚ output_3: \n - Định dạng output_3 đảm bảo chắc chắn output json như sau:\n     {\n  \"output_3\": {\n    \"subject\": Chủ đề nhận email,\n    \"recipients\": Tên một hoặc nhiều nhân viên(nếu có),\n    \"department\": Phòng ban nhận mail(nếu có),\n    \"content\": Nội dung nhận mail\n  }\n}\n\n\nCHÚ Ý QUAN TRỌNG:\n- ĐẢM BẢO, CHẮC CHẮN chỉ Output 1 trong 3. Câu truy vấn nào liên quan hơn thì chọn output đó. \n- Nếu cả 3 output đều không liên quan thì không output gì cả."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2928,
+        6640
+      ],
+      "id": "347ed454-ab52-41b0-b694-178c08b91aab",
+      "name": "AI Agent2",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "notes": "Phân tích câu hỏi có nằm trong nhóm cần trả lời không? \nNhóm 1: hỏi về thông tin doanh nghiệp\nNhóm 2: Tổng hợp số liệu nội bộ"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=123",
+        "contextWindowLength": 6
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        3216,
+        6912
+      ],
+      "id": "626417af-1f73-4460-b898-ef25a95b1866",
+      "name": "Simple Memory1",
+      "notesInFlow": false,
+      "notes": "bộ nhớ lưu trữ lịch sử ngữ cảnh.\nCài đặt Context Window Length gửi đến LLM số ngữ cảnh gần nhất để LLM tổng hợp câu hỏi hoàn thiện cuối cùng"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        6864
+      ],
+      "id": "385b3eff-313c-4c71-8ce8-3df956dbb8cb",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "bVz8PEdQYSDI7jq8",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "BÀI 3: Đáu nối node agent vào LightRAG\n\n",
+        "height": 480,
+        "width": 1280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2272,
+        6560
+      ],
+      "id": "864106c0-032c-4a9f-aa69-28f129a378dc",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output_1 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "id": "2c9752e6-c937-4f9a-9cd5-9e29d06f3dd1"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "eea80cc5-a0f6-49b0-ac1a-6380967bc417",
+                    "leftValue": "={{ $json.output_2 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "516312ab-e83d-4a1b-a4fa-324d04e6972a",
+                    "leftValue": "={{ $json.output_3 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3664,
+        6640
+      ],
+      "id": "997aeb9e-8eaf-4a20-a290-fdc80a82456e",
+      "name": "Switch2",
+      "notesInFlow": false,
+      "notes": "Lấy giá trị output1 và output2 để rẽ nhánh flow phù hợp"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy input data\nlet raw = $input.item.json.output || $input.item.json || items[0].json.output || items[0].json;\n\n// Nếu raw là array, lấy phần tử đầu tiên\nif (Array.isArray(raw)) {\n  raw = raw[0];\n}\n\n// Nếu raw là object có property output, lấy output\nif (typeof raw === 'object' && raw.output) {\n  raw = raw.output;\n}\n\n// Convert sang string nếu cần\nraw = typeof raw === 'string' ? raw : JSON.stringify(raw);\n\nlet output_1 = null;\nlet output_2 = null;\nlet output_3 = null;\n\ntry {\n  // Thử parse trực tiếp nếu là JSON thuần\n  let parsedData = JSON.parse(raw);\n  \n  output_1 = parsedData.output_1 || null;\n  output_2 = parsedData.output_2 || null;\n  output_3 = parsedData.output_3 || null;\n  \n} catch (e) {\n  // Nếu không parse được, thử extract từ markdown code block\n  const jsonMatch = raw.match(/```json\\s*\\n?([\\s\\S]*?)\\n?```/);\n  \n  if (jsonMatch) {\n    try {\n      const parsedData = JSON.parse(jsonMatch[1]);\n      output_1 = parsedData.output_1 || null;\n      output_2 = parsedData.output_2 || null;\n      output_3 = parsedData.output_3 || null;\n    } catch (parseError) {\n      console.log('Error parsing JSON from markdown:', parseError);\n    }\n  } else {\n    // Fallback: thử dùng regex để extract từng output\n    const match1 = raw.match(/\"output_1\"\\s*:\\s*({[^}]*}|\"[^\"]*\"|null)/);\n    const match2 = raw.match(/\"output_2\"\\s*:\\s*({[^}]*}|\"[^\"]*\"|null)/);\n    const match3 = raw.match(/\"output_3\"\\s*:\\s*({[^}]*}|\"[^\"]*\"|null)/);\n    \n    output_1 = match1 ? (match1[1] === 'null' ? null : JSON.parse(match1[1])) : null;\n    output_2 = match2 ? (match2[1] === 'null' ? null : JSON.parse(match2[1])) : null;\n    output_3 = match3 ? (match3[1] === 'null' ? null : JSON.parse(match3[1])) : null;\n  }\n}\n\nreturn [{\n  json: {\n    output_1,\n    output_2,\n    output_3\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        6656
+      ],
+      "id": "1da6f528-711b-4129-9cf6-a66155b15362",
+      "name": "output1_output4",
+      "notes": "Xử lý lấy giá trị output1 và output2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "508c4a6f-9a95-48c6-b362-5d2fb5366bb4",
+              "name": "query",
+              "value": "thông tin giờ làm viẹc ?",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2480,
+        6656
+      ],
+      "id": "27adeb4a-1c98-4558-8736-5bbd8ef15e66",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lightrag-production-5293.up.railway.app/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "xxx"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\":\"{{ $json.output_1 }}\",\n  \"mode\": \"mix\",\n  \"only_need_context\": false,\n  \"only_need_prompt\": false,\n  \"response_type\": \"string\",\n  \"top_k\": 2,\n  \"chunk_top_k\": 2,\n  \"max_total_tokens\": 2000,\n  \"include_references\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4080,
+        6656
+      ],
+      "id": "724ff0a1-d555-410a-a403-f2fe635a635c",
+      "name": "lightRAG2"
+    },
+    {
+      "parameters": {
+        "content": "BÀI 5: Test gọi api đến vana\ntruy vấn để gen câu lệnh SQL\n\n",
+        "height": 304,
+        "width": 640
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2256,
+        7776
+      ],
+      "id": "07777790-72a8-457f-acb3-4af1964d4175",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "BÀI 6: Test gọi api đến vana\ntruy vấn để nhận câu trả lời văn bản\n\n",
+        "height": 304,
+        "width": 640
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2256,
+        8192
+      ],
+      "id": "9f0409f5-3f33-42ab-b258-e9ad1312caab",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "BÀI 4: Test gọi api đến vanna\nTraining data vanna\n\n",
+        "height": 304,
+        "width": 640
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2208,
+        7296
+      ],
+      "id": "284f9e59-3b20-404a-a8a3-d2708f03a8cb",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://bot-api.zapps.me/bot2013628196265532631:xxx/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Respond OK').item.json.body.message.chat.id }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.response }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9552,
+        7664
+      ],
+      "id": "da97c4bc-9ff3-4df4-b3c9-d8d22649de44",
+      "name": "chat"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lightrag-production-5293.up.railway.app/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "xxx"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\":\"{{ $('output1_output2').item.json.output_1 }}\",\n  \"mode\": \"mix\",\n  \"only_need_context\": false,\n  \"only_need_prompt\": false,\n  \"response_type\": \"string\",\n  \"top_k\": 3,\n  \"chunk_top_k\": 3,\n  \"max_total_tokens\": 2000,\n  \"include_references\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8880,
+        7648
+      ],
+      "id": "f5ca1d6f-7b3f-4124-81f9-62603bd76e1d",
+      "name": "lightRAG1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://bot-api.zapps.me/bot2013628196265532631:xxx/sendChatAction",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Respond OK').item.json.body.message.chat.id }}"
+            },
+            {
+              "name": "action",
+              "value": "typing"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8976,
+        7440
+      ],
+      "id": "d7452d67-bb91-41b5-a619-8815fd933ba5",
+      "name": "typing"
+    },
+    {
+      "parameters": {
+        "url": "https://vanna-production.up.railway.app/api/v0/ask",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "question",
+              "value": "={{ $('output1_output2').item.json.output_2 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d355b313-5e90-489c-b4f7-6e4e1e503c82",
+      "name": "Generate SQL2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8880,
+        7872
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.data }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Bạn là một trợ lý AI. \nNhiệm vụ của bạn là phân tích câu truy vấn của người dùng liên quan đến truy vấn số liệu tổng hợp, thống kê.\nHãy trả lời 1 cách hoàn chỉnh, phù hợp với dữa liệu trả về do hệ thống cung cấp.\n\n- Số liệu hệ thống: {{ JSON.stringify($json.data)}}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        9392,
+        7968
+      ],
+      "id": "68d9b8fa-e262-4423-af06-6cddc45bb854",
+      "name": "AI Agent1",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://bot-api.zapps.me/bot2013628196265532631:xxx/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Respond OK').item.json.body.message.chat.id }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9888,
+        7968
+      ],
+      "id": "42b26a02-9e20-44e3-a7a6-646c1da17492",
+      "name": "chat2"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output_1 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "id": "2c9752e6-c937-4f9a-9cd5-9e29d06f3dd1"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "eea80cc5-a0f6-49b0-ac1a-6380967bc417",
+                    "leftValue": "={{ $json.output_2 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "516312ab-e83d-4a1b-a4fa-324d04e6972a",
+                    "leftValue": "={{ $json.output_3 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        7712,
+        7744
+      ],
+      "id": "8b786055-217c-4388-9574-7f21b091378f",
+      "name": "Switch1",
+      "notesInFlow": false,
+      "notes": "Lấy giá trị output1 và output2 để rẽ nhánh flow phù hợp"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        9504,
+        8192
+      ],
+      "id": "a1928ed6-5408-43f2-bb83-474799630cf6",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "bVz8PEdQYSDI7jq8",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://bot-api.zapps.me/bot2013628196265532631:xxx/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Respond OK').item.json.body.message.chat.id }}"
+            },
+            {
+              "name": "=text",
+              "value": "Đang tổng hợp số liệu. Vui lòng đợi trong lát...!!!"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8096,
+        7776
+      ],
+      "id": "6bbeca0a-7cc7-4440-8327-06cb28399b7f",
+      "name": "wait_load1"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        8688,
+        7440
+      ],
+      "id": "779946d1-2c40-4ff8-841c-42ee8878f25d",
+      "name": "Wait",
+      "webhookId": "ba104523-7cee-4fb1-adeb-02b16bdac314"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://bot-api.zapps.me/bot2013628196265532631:hxDOVbPSVLDsuqjjIUiLAWeaWSQreLKNPSWkFFHEFgMVKbjIzXUXTQOJggejCWJr/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Respond OK').item.json.body.message.chat.id }}"
+            },
+            {
+              "name": "text",
+              "value": "Đang lấy thông tin về Doanh nghiệp, vui lòng đợi 1 lát..."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8144,
+        7568
+      ],
+      "id": "4fc16c8f-4f18-486a-89e5-744d7721942c",
+      "name": "wait_load"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy input data\nlet raw = $input.item.json.output || $input.item.json || items[0].json.output || items[0].json;\n\n// Nếu raw là array, lấy phần tử đầu tiên\nif (Array.isArray(raw)) {\n  raw = raw[0];\n}\n\n// Nếu raw là object có property output, lấy output\nif (typeof raw === 'object' && raw.output) {\n  raw = raw.output;\n}\n\n// Convert sang string nếu cần\nraw = typeof raw === 'string' ? raw : JSON.stringify(raw);\n\nlet output_1 = null;\nlet output_2 = null;\nlet output_3 = null;\n\ntry {\n  // Thử parse trực tiếp nếu là JSON thuần\n  let parsedData = JSON.parse(raw);\n  \n  output_1 = parsedData.output_1 || null;\n  output_2 = parsedData.output_2 || null;\n  output_3 = parsedData.output_3 || null;\n  \n} catch (e) {\n  // Nếu không parse được, thử extract từ markdown code block\n  const jsonMatch = raw.match(/```json\\s*\\n?([\\s\\S]*?)\\n?```/);\n  \n  if (jsonMatch) {\n    try {\n      const parsedData = JSON.parse(jsonMatch[1]);\n      output_1 = parsedData.output_1 || null;\n      output_2 = parsedData.output_2 || null;\n      output_3 = parsedData.output_3 || null;\n    } catch (parseError) {\n      console.log('Error parsing JSON from markdown:', parseError);\n    }\n  } else {\n    // Fallback: thử dùng regex để extract từng output\n    const match1 = raw.match(/\"output_1\"\\s*:\\s*({[^}]*}|\"[^\"]*\"|null)/);\n    const match2 = raw.match(/\"output_2\"\\s*:\\s*({[^}]*}|\"[^\"]*\"|null)/);\n    const match3 = raw.match(/\"output_3\"\\s*:\\s*({[^}]*}|\"[^\"]*\"|null)/);\n    \n    output_1 = match1 ? (match1[1] === 'null' ? null : JSON.parse(match1[1])) : null;\n    output_2 = match2 ? (match2[1] === 'null' ? null : JSON.parse(match2[1])) : null;\n    output_3 = match3 ? (match3[1] === 'null' ? null : JSON.parse(match3[1])) : null;\n  }\n}\n\nreturn [{\n  json: {\n    output_1,\n    output_2,\n    output_3\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7488,
+        7744
+      ],
+      "id": "71a5802c-ba4a-43bf-a617-e57991684c18",
+      "name": "output1_output2",
+      "notes": "Xử lý lấy giá trị output1 và output2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://bot-api.zapps.me/bot2013628196265532631:xxx/sendPhoto",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Respond OK').item.json.body.message.chat.id }}"
+            },
+            {
+              "name": "caption",
+              "value": "Số liệu thống kê"
+            },
+            {
+              "name": "photo",
+              "value": "={{ $json.chart_local_url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9744,
+        7808
+      ],
+      "id": "b5623ff0-b667-4026-937e-a529d78b6c8d",
+      "name": "send chart"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.emails }}",
+        "subject": "={{ $('output1_output2').item.json.output_3.subject }}",
+        "emailType": "text",
+        "message": "={{ $('output1_output2').item.json.output_3.content }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        9072,
+        8256
+      ],
+      "id": "5ad45db3-f7b4-4071-b5fd-611f3f1d3df9",
+      "name": "Send a message",
+      "webhookId": "4e6b42d8-45e1-444d-937c-a56252767bd9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cM1XJpdRHGRFSuS8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://vanna-production.up.railway.app/api/v0/ask",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "question",
+              "value": "=Lấy email của {{ ($('output1_output2').item.json.output_3.department || '' ) + ($('output1_output2').item.json.output_3.recipients || '') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ea3165a0-e623-4b32-b1f9-360a59276296",
+      "name": "Generate SQL1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8304,
+        7984
+      ],
+      "notes": "lấy danh sách mail"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://bot-api.zapps.me/bot2013628196265532631:xxx/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Respond OK').item.json.body.message.chat.id }}"
+            },
+            {
+              "name": "=text",
+              "value": "=Yêu cầu gửi email, đang lấy danh sách email của {{ ($json.output_3.department || '' ) + ($json.output_3.recipients || '') }} ...!"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8096,
+        7952
+      ],
+      "id": "6968e517-695c-49d8-be60-ce2ba37aae01",
+      "name": "wait_load2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://bot-api.zapps.me/bot2013628196265532631:hxDOVbPSVLDsuqjjIUiLAWeaWSQreLKNPSWkFFHEFgMVKbjIzXUXTQOJggejCWJr/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Respond OK').item.json.body.message.chat.id }}"
+            },
+            {
+              "name": "text",
+              "value": "=Danh sách email đã tìm thấy:\n{{ $json.data.toJsonString() }}\nĐợi 1 lát đang gửi mail ...!"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8528,
+        8032
+      ],
+      "id": "8cc57cf4-73d6-43f1-8566-fbc5a21c6f7f",
+      "name": "chat3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy data từ node Generate SQL1\nconst data = $('Generate SQL1').first().json.data;\n\n// Lấy tất cả email và nối bằng dấu ;\nconst result = data.map(item => item.email).join(';');\n\n// Return kết quả\nreturn [{ json: { emails: result } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8704,
+        8096
+      ],
+      "id": "4b76cc62-4760-4a82-82ca-d71e2527876e",
+      "name": "output1_output",
+      "notes": "lấy danh sách emai, nối chuỗi email lại "
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://bot-api.zapps.me/bot2013628196265532631:xxx/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Respond OK').item.json.body.message.chat.id }}"
+            },
+            {
+              "name": "text",
+              "value": "=Gửi email thành công!\nChủ đề: {{ $('output1_output2').item.json.output_3.subject }}\nNhân viên/phòng ban nhận: {{ ($('output1_output2').item.json.output_3.department || '') + ($('output1_output2').item.json.output_3.recipients  || '' )}}\nNội dung: {{ $('output1_output2').item.json.output_3.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9440,
+        8416
+      ],
+      "id": "a1032303-bc2d-4997-a185-4068f3b253d6",
+      "name": "chat4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.query }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Bạn là một trợ lý AI. Hãy output_1 và output_2 với nội dung sau:\n\n1. Giải thích OUTPUT_1: Nhiệm vụ của bạn là phân tích câu truy vấn của người dùng (bằng tiếng Việt) để xác định xem câu hỏi đó có liên quan đến những vấn đề sau hay không?\n- Liên quan đến TỔ CHỨC NHÂN SỰ \n- liên quan đến NỘI QUY LÀM VIỆC\n- liên quan đến QUY TRÌNH LÀM VIỆC\n- liên quan đến THÔNG TIN DOANH NGHIỆP/CÔNG TY\nNếu đúng thì hãy tóm tắt tất cả lịch sử ngữ cảnh thành truy vấn hoàn chỉnh phù hợp.\n\nGHI CHÚ output_1:\n - Output chỉ chứa câu hỏi hoàn chỉnh\n - Định dạng output_1 đảm bảo chắc chắn kiểu json như sau:\n      {\"output_1\" : \"câu hỏi hoàn chỉnh\"}\n\n\n2. Giải thích OUTPUT_2: Tiếp tục xác định câu hỏi (bằng tiếng việt) có liên quan đến truy vấn xử lý số liệu (doanh thu, đơn đặt hàng, bán hàng, mua hàng ... ) hoặc cần liệt kê danh sách(email, khách hàng, sản phẩm, nhân viên ...) lấy từ database không?\nNếu đúng thì hãy tóm tắt tất cả lịch sử ngữ cảnh thành câu truy vấn hoàn chỉnh phù hợp.\n\nGHI CHÚ output_2:\n - Output chỉ chứa câu hỏi hoàn chỉnh\n - Định dạng output_2 đảm bảo chắc chắn kiểu json như sau:\n     {\"output_2\" : \"câu hỏi hoàn chỉnh\"}\n\n3. Giải thích OUTPUT_3: Tiếp tục xác định có phải người dùng yêu cầu gửi email không?\nNếu đúng thì hãy tóm tắt tất cả lịch sử ngữ cảnh và output_3\n\nGHI CHÚ output_3: \n - Định dạng output_3 đảm bảo chắc chắn output json như sau:\n     {\n  \"output_3\": {\n    \"subject\": Chủ đề nhận email,\n    \"recipients\": Tên một hoặc nhiều nhân viên(nếu có),\n    \"department\": Phòng ban nhận mail(nếu có),\n    \"content\": Nội dung nhận mail\n  }\n}\n\n\nCHÚ Ý QUAN TRỌNG:\n- ĐẢM BẢO, CHẮC CHẮN chỉ Output 1 trong 3. Câu truy vấn nào liên quan hơn thì chọn output đó. \n- Nếu cả 3 output đều không liên quan thì không output gì cả."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        7152,
+        7744
+      ],
+      "id": "5b948ae9-242a-461b-9392-02f9e7baa141",
+      "name": "AI Agent3",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "notes": "Phân tích câu hỏi có nằm trong nhóm cần trả lời không? \nNhóm 1: hỏi về thông tin doanh nghiệp\nNhóm 2: Tổng hợp số liệu nội bộ"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=1234",
+        "contextWindowLength": 6
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        7264,
+        8048
+      ],
+      "id": "484332d5-94e4-4d85-9abf-c97c608c1c54",
+      "name": "Simple Memory2",
+      "notesInFlow": false,
+      "notes": "bộ nhớ lưu trữ lịch sử ngữ cảnh.\nCài đặt Context Window Length gửi đến LLM số ngữ cảnh gần nhất để LLM tổng hợp câu hỏi hoàn thiện cuối cùng"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        7008,
+        7952
+      ],
+      "id": "b7dd0fee-994c-4bd0-9b91-f7f09b47b11d",
+      "name": "Google Gemini Chat Model3",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "bVz8PEdQYSDI7jq8",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "508c4a6f-9a95-48c6-b362-5d2fb5366bb4",
+              "name": "query",
+              "value": "thông tin giờ làm viẹc ?",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6560,
+        7744
+      ],
+      "id": "d36438cc-ee1f-458d-ba9b-390305de3ee0",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "content": "DEMO TOÀN BỘ FLOW\n",
+        "height": 848,
+        "width": 1824
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        6272,
+        7504
+      ],
+      "id": "38077952-535f-4b7a-8b06-24afe8287c6e",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "output1_output3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Training Data1": {
+      "main": [
+        [
+          {
+            "node": "Train Batch API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Training Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Training Data": {
+      "main": [
+        [
+          {
+            "node": "Clear Training Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "output1_output3": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "lightRAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "output1_output4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "output1_output4": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "lightRAG2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lightRAG1": {
+      "main": [
+        [
+          {
+            "node": "chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate SQL2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "send chart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "chat2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "wait_load",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "wait_load1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "wait_load2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wait_load1": {
+      "main": [
+        [
+          {
+            "node": "Generate SQL2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "typing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wait_load": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "lightRAG1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "output1_output2": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "chat4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate SQL1": {
+      "main": [
+        [
+          {
+            "node": "chat3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wait_load2": {
+      "main": [
+        [
+          {
+            "node": "Generate SQL1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chat3": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "output1_output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "output1_output": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent3": {
+      "main": [
+        [
+          {
+            "node": "output1_output2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "58879cef84f9e04b46cf680bb29eece3e6bbd3cee003ac9bfdf7e3dd27eeb09d"
+  },
+  "tags": [
+    {
+      "createdAt": "2025-11-02T08:19:34.530Z",
+      "updatedAt": "2025-11-02T08:19:34.530Z",
+      "id": "bfSpFJKWVKwBSAyg",
+      "name": "Workflows"
+    }
+  ]
+}
